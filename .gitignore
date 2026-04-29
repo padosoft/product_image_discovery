@@ -1,0 +1,17 @@
+/vendor/
+/node_modules/
+/.phpunit.cache/
+/coverage/
+/build/
+/dist/
+/storage/
+/sidecar/node_modules/
+/sidecar/coverage/
+/sidecar/.env
+.DS_Store
+Thumbs.db
+composer.lock
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
