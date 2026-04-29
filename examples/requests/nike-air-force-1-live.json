@@ -1,0 +1,17 @@
+{
+  "client_id": 1,
+  "erp_model_id": "NIKE-AF1-07",
+  "erp_model_color_id": "NIKE-AF1-07-CW2288-111",
+  "erp_model_color_size_id": null,
+  "brand": "Nike",
+  "supplier": "Nike",
+  "sku": null,
+  "supplier_sku": "CW2288-111",
+  "model_code": "Air Force 1 07",
+  "color_code": "CW2288-111",
+  "color_name": "White",
+  "ean": null,
+  "season": null,
+  "category": "Sneakers",
+  "material": "Leather"
+}

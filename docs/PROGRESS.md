@@ -31,6 +31,11 @@ Implementare il modulo Product Image Discovery & Verification come package Larav
 - Community README rewritten with badges, pitch, architecture, installation, API quickstart, config, testing, roadmap, contributing.
 - Added root `.env.example` and `sidecar/.env.example`.
 - Expanded README with a junior-friendly live smoke test from a fresh Laravel app and real fashion product payload examples.
+- Added opt-in live Brave provider/manager tests and an opt-in full live product-image pipeline test.
+- Fixed enum persistence bug discovered by live pipeline: manual-review decision reasons must not be written into the request `rejection_reason` enum column.
+- Added model-phrase matching so real catalog names such as `Air Force 1 07` can count as strong deterministic matches.
+- Added request JSON examples under `examples/requests/` and removed source/product URLs from ERP request payload examples.
+- Prepared env/config keys for future OpenAI, Anthropic and OpenRouter AI integration without making AI a runtime dependency yet.
 
 ### Fixes Made During Integration
 

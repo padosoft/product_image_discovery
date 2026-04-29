@@ -172,6 +172,11 @@ final class ScoreCandidateImageAction
             $matches[] = 'model_code';
             $strongMatches[] = 'model_code';
             $flags['model_matched'] = true;
+        } elseif (TextNormalizer::containsPhrase($corpus, $identity->modelCode)) {
+            $score += 25;
+            $matches[] = 'model_phrase';
+            $strongMatches[] = 'model_phrase';
+            $flags['model_matched'] = true;
         } elseif (TextNormalizer::hasSimilarCodeMismatch($corpus, $identity->modelCode)) {
             $mismatches[] = 'model_code_similar_mismatch';
             $flags['model_mismatch'] = true;

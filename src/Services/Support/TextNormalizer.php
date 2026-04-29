@@ -105,6 +105,18 @@ final class TextNormalizer
         return preg_match('/(?:^| )' . preg_quote($needle, '/') . '(?: |$)/', $haystack) === 1;
     }
 
+    public static function containsPhrase(string $haystack, ?string $phrase): bool
+    {
+        $phrase = self::normalizeText($phrase);
+        $haystack = self::normalizeText($haystack);
+
+        if ($phrase === null || $haystack === null || ! str_contains($phrase, ' ')) {
+            return false;
+        }
+
+        return preg_match('/(?:^| )' . preg_quote($phrase, '/') . '(?: |$)/', $haystack) === 1;
+    }
+
     public static function containsExactCode(string $haystack, ?string $code): bool
     {
         $code = self::normalizeCode($code);

@@ -12,6 +12,7 @@ use Illuminate\Queue\SerializesModels;
 use Padosoft\ProductImageDiscovery\Actions\ResolveDecisionAction;
 use Padosoft\ProductImageDiscovery\DTO\CandidateScoreData;
 use Padosoft\ProductImageDiscovery\Enums\ProductImageDiscoveryCandidateStatus;
+use Padosoft\ProductImageDiscovery\Enums\ProductImageDiscoveryRejectionReason;
 use Padosoft\ProductImageDiscovery\Enums\ProductImageDiscoveryRequestStatus;
 use Padosoft\ProductImageDiscovery\Jobs\Concerns\ResolvesQueueName;
 use Padosoft\ProductImageDiscovery\Jobs\Contracts\PipelineStoreInterface;
@@ -110,12 +111,16 @@ final class AssessImageQualityJob implements ShouldQueue
         $bestCandidateScore = is_array($decision['best_candidate_score'] ?? null) ? $decision['best_candidate_score'] : null;
         $bestCandidateId = $this->findCandidateIdForScore($store->listCandidates($this->requestId), $bestCandidateScore);
 
+        $requestStatus = $this->mapRequestStatus((string) ($decision['status'] ?? ProductImageDiscoveryRequestStatus::ManualReview->value));
+
         $store->updateRequest($this->requestId, [
-            'status' => $this->mapRequestStatus((string) ($decision['status'] ?? ProductImageDiscoveryRequestStatus::ManualReview->value)),
+            'status' => $requestStatus,
             'best_candidate_id' => $bestCandidateId,
             'selected_candidate_id' => $bestCandidateId,
             'final_score' => $bestCandidateScore['final_score'] ?? null,
-            'rejection_reason' => $decision['reason'] ?? null,
+            'rejection_reason' => $requestStatus === ProductImageDiscoveryRequestStatus::Rejected->value
+                ? $this->mapRejectionReason($decision['reason'] ?? null)
+                : null,
             'verified_at' => gmdate('c'),
         ]);
 
@@ -159,6 +164,29 @@ final class AssessImageQualityJob implements ShouldQueue
             ProductImageDiscoveryRequestStatus::ReadyToPublish->value => ProductImageDiscoveryRequestStatus::ReadyToPublish->value,
             ProductImageDiscoveryRequestStatus::Rejected->value => ProductImageDiscoveryRequestStatus::Rejected->value,
             default => ProductImageDiscoveryRequestStatus::ManualReview->value,
+        };
+    }
+
+    private function mapRejectionReason(mixed $reason): ?string
+    {
+        if (! is_string($reason) || trim($reason) === '') {
+            return null;
+        }
+
+        $reason = trim($reason);
+        $upperReason = strtoupper($reason);
+
+        foreach (ProductImageDiscoveryRejectionReason::cases() as $case) {
+            if ($case->value === $upperReason) {
+                return $case->value;
+            }
+        }
+
+        return match ($reason) {
+            'source_not_auto_publishable' => ProductImageDiscoveryRejectionReason::SourceNotAllowed->value,
+            'quality_not_passed' => ProductImageDiscoveryRejectionReason::LowResolution->value,
+            'robots_or_permission_blocked' => ProductImageDiscoveryRejectionReason::RobotsOrPermissionBlocked->value,
+            default => ProductImageDiscoveryRejectionReason::LowConfidence->value,
         };
     }
 }

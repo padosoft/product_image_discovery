@@ -107,6 +107,29 @@ final class AntiFalsePositiveDecisionTest extends TestCase
         self::assertSame('source_not_auto_publishable', $decision['reason']);
     }
 
+    public function test_multi_word_model_name_can_be_a_strong_match_for_real_catalog_titles(): void
+    {
+        $identity = ProductIdentityData::fromArray([
+            'brand' => 'Nike',
+            'model_code' => 'Air Force 1 07',
+            'color_name' => 'white',
+        ]);
+        $candidate = CandidateImageData::fromArray([
+            'source_page_url' => 'https://www.nike.com/t/air-force-1-07-mens-shoes-jBrhbr',
+            'image_url' => 'https://static.nike.com/a/images/t_prod/w_1200/air-force-1-07.jpg',
+            'title' => "Nike Air Force 1 '07 Men's Shoes White",
+            'width' => 1200,
+            'height' => 1200,
+            'quality_score' => 95,
+        ]);
+
+        $score = $this->score->handle($identity, $candidate);
+
+        self::assertTrue($score->hasStrongMatch);
+        self::assertContains('model_phrase', $score->evidence['strong_matches']);
+        self::assertTrue($score->modelMatched);
+    }
+
     /**
      * @return array<string, mixed>
      */

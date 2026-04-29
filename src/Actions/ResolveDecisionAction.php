@@ -62,7 +62,7 @@ final class ResolveDecisionAction
 
         return [
             'status' => 'rejected',
-            'reason' => $best->rejectionReason ?? 'low_confidence',
+            'reason' => $best->rejectionReason ?? 'LOW_CONFIDENCE',
             'best_candidate_score' => $best->toArray(),
             'evidence' => ['decision' => 'below_review_threshold'],
         ];

@@ -361,13 +361,20 @@ curl -X POST "http://127.0.0.1:8000/api/product-image-discovery/requests" \
     "supplier_sku": "CW2288-111",
     "model_code": "Air Force 1 07",
     "color_code": "CW2288-111",
-    "color_name": "White/White",
+    "color_name": "White",
     "category": "Sneakers",
-    "material": "Leather",
-    "metadata": {
-      "source_url": "https://www.nike.com/t/air-force-1-07-mens-shoes-jBrhbr"
-    }
+    "material": "Leather"
   }'
+```
+
+The same payload is available as a ready-to-edit JSON file:
+
+```bash
+curl -X POST "http://127.0.0.1:8000/api/product-image-discovery/requests" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  --data @examples/requests/nike-air-force-1-live.json
 ```
 
 You should receive a JSON response with `ok: true` and a `request_id`. Because `QUEUE_CONNECTION=sync`, the pipeline runs during the request cycle.
@@ -475,7 +482,16 @@ curl -X POST "https://your-app.test/api/product-image-discovery/requests/1/candi
 
 ## Real Product Payload Examples
 
-These examples use public product pages observed while writing the docs. Ecommerce pages can change, go out of stock or block automated access, so treat them as realistic test payloads rather than permanent fixtures. Do not invent EANs: leave `ean` empty unless your ERP/PIM has the real barcode.
+These examples are realistic ERP/PIM payloads for products that also exist on public fashion sites. The request intentionally does not include an image URL or product page URL: discovering that page/image is the job of the package. Ecommerce pages can change, go out of stock or block automated access, so treat these as smoke-test payloads rather than permanent fixtures. Do not invent EANs: leave `ean` empty unless your ERP/PIM has the real barcode.
+
+Ready-to-edit request files are available in:
+
+```text
+examples/requests/
+```
+
+- `erp-product-image-discovery-request.example.json`: generic ERP/PIM template without image/source URLs.
+- `nike-air-force-1-live.json`: concrete Nike smoke-test payload.
 
 ### Nike Air Force 1 07, White/White
 
@@ -491,12 +507,9 @@ Source page: [Nike Air Force 1 07 men's shoes](https://www.nike.com/t/air-force-
   "supplier_sku": "CW2288-111",
   "model_code": "Air Force 1 07",
   "color_code": "CW2288-111",
-  "color_name": "White/White",
+  "color_name": "White",
   "category": "Sneakers",
-  "material": "Leather",
-  "metadata": {
-    "source_url": "https://www.nike.com/t/air-force-1-07-mens-shoes-jBrhbr"
-  }
+  "material": "Leather"
 }
 ```
 
@@ -514,12 +527,9 @@ Source page: [LuisaViaRoma Nike Air Force 1 07 sneakers](https://www.luisaviarom
   "supplier_sku": "82I-U3C014",
   "model_code": "Air Force 1 07",
   "color_code": "82I-U3C014",
-  "color_name": "White/White",
+  "color_name": "White",
   "category": "Sneakers",
-  "material": "Calf leather",
-  "metadata": {
-    "source_url": "https://www.luisaviaroma.com/en-us/p/nike/women/82I-U3C014"
-  }
+  "material": "Calf leather"
 }
 ```
 
@@ -539,10 +549,7 @@ Source page: [LuisaViaRoma adidas Originals Samba OG sneakers](https://www.luisa
   "color_code": "80I-T57018",
   "color_name": "White/Black",
   "category": "Sneakers",
-  "material": "Calf leather",
-  "metadata": {
-    "source_url": "https://www.luisaviaroma.com/en-us/p/adidas-originals/men/80I-T57018"
-  }
+  "material": "Calf leather"
 }
 ```
 
@@ -562,10 +569,7 @@ Source page: [LuisaViaRoma New Balance 550 sneakers](https://www.luisaviaroma.co
   "color_code": "78I-AM9016",
   "color_name": "White/Grey",
   "category": "Sneakers",
-  "material": "Leather and synthetic",
-  "metadata": {
-    "source_url": "https://www.luisaviaroma.com/en-us/p/new-balance/men/78I-AM9016"
-  }
+  "material": "Leather and synthetic"
 }
 ```
 
@@ -636,6 +640,19 @@ The sidecar uses Playwright when available and falls back to static HTTP+HTML ex
 The package is designed to support AI-assisted verification, enhancement and description generation, but the core pipeline does not require an LLM. Keep AI features behind configuration flags and run live provider tests only when credentials are explicitly available.
 
 This keeps local development, CI and production ingestion stable even when a model provider is unavailable.
+
+The config is already prepared for the providers most teams ask for first:
+
+```env
+PRODUCT_IMAGE_DISCOVERY_AI_ENABLED=false
+PRODUCT_IMAGE_DISCOVERY_AI_PROVIDER=anthropic
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+OPENROUTER_API_KEY=
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+```
+
+At this stage the AI keys are reserved for the optional AI pipeline. The deterministic Brave/search/verification/download/quality flow works without them.
 
 ## Testing
 

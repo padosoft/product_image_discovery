@@ -1,0 +1,21 @@
+{
+  "client_id": 1,
+  "erp_model_id": "YOUR-ERP-MODEL-ID",
+  "erp_model_color_id": "YOUR-ERP-MODEL-COLOR-ID",
+  "erp_model_color_size_id": null,
+  "brand": "Brand name",
+  "supplier": "Supplier or marketplace name",
+  "sku": "YOUR-INTERNAL-SKU",
+  "supplier_sku": "SUPPLIER-SKU-OR-MPN",
+  "model_code": "Model name or code",
+  "color_code": "Supplier color code",
+  "color_name": "Color name",
+  "ean": null,
+  "season": "FW26",
+  "category": "Sneakers",
+  "material": "Leather",
+  "metadata": {
+    "erp_export_batch_id": "BATCH-001",
+    "notes": "Replace every value with the ERP/PIM data you want to test. Do not provide an image URL or source page URL; the package should discover those."
+  }
+}

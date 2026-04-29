@@ -60,4 +60,25 @@ return [
         'manual_review_threshold' => 60,
         'reject_below_threshold' => 60,
     ],
+
+    'ai' => [
+        'enabled' => env('PRODUCT_IMAGE_DISCOVERY_AI_ENABLED', false),
+        'provider' => env('PRODUCT_IMAGE_DISCOVERY_AI_PROVIDER', 'anthropic'),
+        'vision_model' => env('PRODUCT_IMAGE_DISCOVERY_AI_VISION_MODEL'),
+        'description_model' => env('PRODUCT_IMAGE_DISCOVERY_AI_DESCRIPTION_MODEL'),
+        'providers' => [
+            'openai' => [
+                'api_key' => env('OPENAI_API_KEY'),
+                'base_url' => env('OPENAI_BASE_URL'),
+            ],
+            'anthropic' => [
+                'api_key' => env('ANTHROPIC_API_KEY'),
+                'base_url' => env('ANTHROPIC_BASE_URL'),
+            ],
+            'openrouter' => [
+                'api_key' => env('OPENROUTER_API_KEY'),
+                'base_url' => env('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'),
+            ],
+        ],
+    ],
 ];
