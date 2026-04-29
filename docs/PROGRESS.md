@@ -29,6 +29,8 @@ Implementare il modulo Product Image Discovery & Verification come package Larav
 - Sidecar: Node HTTP service with `/health` and `/render`, Playwright renderer with static fallback, timeout and secret handling, offline Node tests.
 - Documentation memory: `docs/LESSON.md`, `docs/PROGRESS.md`, `docs/RULES.md`, `AGENTS.md`, local skill seed.
 - Community README rewritten with badges, pitch, architecture, installation, API quickstart, config, testing, roadmap, contributing.
+- Added root `.env.example` and `sidecar/.env.example`.
+- Expanded README with a junior-friendly live smoke test from a fresh Laravel app and real fashion product payload examples.
 
 ### Fixes Made During Integration
 

@@ -49,6 +49,8 @@
 - Pure PHPUnit tests may run without a Laravel facade root. Job helpers and loggers must degrade gracefully when facades are unavailable.
 - `EloquentPipelineStore::mergeRequestContext()` stores pipeline context under `raw_payload.context`; request arrays expose it as `context`.
 - Sidecar tests are offline by default. The live contract test should remain opt-in.
+- Keep `.env.example` focused on host-app smoke testing and optional provider credentials. Keep `sidecar/.env.example` focused only on variables the Node sidecar actually reads.
+- README install commands should use single PHP namespace separators in copied shell commands, for example `Padosoft\ProductImageDiscovery\...`, not doubled separators.
 
 ## Future Session Rules
 

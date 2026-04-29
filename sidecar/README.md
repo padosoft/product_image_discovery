@@ -62,6 +62,12 @@ Errore:
 
 ## Config env
 
+Copy `sidecar/.env.example` when you want a local env file:
+
+```bash
+cp .env.example .env
+```
+
 - `SIDECAR_HOST` (default `127.0.0.1`)
 - `SIDECAR_PORT` (default `3100`)
 - `SIDECAR_SHARED_SECRET` (opzionale, header `x-sidecar-secret` o `Authorization: Bearer ...`)

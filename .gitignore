@@ -8,6 +8,10 @@
 /sidecar/node_modules/
 /sidecar/coverage/
 /sidecar/.env
+.env
+.env.local
+.env.testing
+.env.*.local
 .DS_Store
 Thumbs.db
 composer.lock
