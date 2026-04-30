@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Padosoft\ProductImageDiscovery;
 
 use Illuminate\Support\ServiceProvider;
+use Padosoft\ProductImageDiscovery\Console\Commands\ProductImageDiscoveryDebugFlowCommand;
 use Padosoft\ProductImageDiscovery\Jobs\Contracts\PipelineStoreInterface;
 use Padosoft\ProductImageDiscovery\Services\Ai\ProductImageAiVerifier;
 use Padosoft\ProductImageDiscovery\Services\Logging\AuditEventStoreInterface;
@@ -53,6 +54,12 @@ final class ProductImageDiscoveryServiceProvider extends ServiceProvider
     {
         $this->loadRoutesFrom(__DIR__ . '/../routes/api.php');
         $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                ProductImageDiscoveryDebugFlowCommand::class,
+            ]);
+        }
 
         $this->publishes([
             __DIR__ . '/../config/product-image-discovery.php' => config_path('product-image-discovery.php'),

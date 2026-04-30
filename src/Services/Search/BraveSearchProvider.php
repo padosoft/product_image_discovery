@@ -30,19 +30,25 @@ final class BraveSearchProvider implements ProductImageSearchProviderInterface
         }
 
         return new ProductImageSearchResultCollection(array_map(function (array $hit): array {
-            $imageUrl = $this->pick($hit, [
+            $imageUrl = $this->pickUrl($hit, [
                 'properties.url',
                 'image.url',
                 'image.src',
-                'url',
             ]);
+            $pageUrl = $this->pickUrl($hit, [
+                'page_url',
+                'url',
+                'source',
+            ]);
+            $sourceDomain = $this->extractDomain($pageUrl)
+                ?? $this->normalizeDomain($this->pick($hit, ['meta_url.hostname', 'meta_url.netloc', 'source']));
 
             return [
                 'title' => (string) ($hit['title'] ?? $hit['source'] ?? 'Untitled result'),
-                'page_url' => $this->pick($hit, ['page_fetched', 'page_url', 'source', 'url']),
+                'page_url' => $pageUrl,
                 'image_url' => $imageUrl,
-                'thumbnail_url' => $this->pick($hit, ['thumbnail.src', 'thumbnail.url']),
-                'source_domain' => $this->extractDomain($this->pick($hit, ['source', 'page_fetched', 'page_url'])),
+                'thumbnail_url' => $this->pickUrl($hit, ['thumbnail.src', 'thumbnail.url']),
+                'source_domain' => $sourceDomain,
                 'snippet' => $this->pick($hit, ['description', 'snippet']),
                 'width' => $this->normalizeInt($this->pick($hit, ['properties.width', 'width'])),
                 'height' => $this->normalizeInt($this->pick($hit, ['properties.height', 'height'])),
@@ -50,6 +56,8 @@ final class BraveSearchProvider implements ProductImageSearchProviderInterface
                 'provider_metadata' => [
                     'provider' => $this->definition->code,
                     'raw_id' => $hit['id'] ?? null,
+                    'page_fetched' => $hit['page_fetched'] ?? null,
+                    'confidence' => $hit['confidence'] ?? null,
                 ],
             ];
         }, array_values(array_filter($results, static fn (mixed $hit): bool => is_array($hit)))));
@@ -141,6 +149,25 @@ final class BraveSearchProvider implements ProductImageSearchProviderInterface
         return null;
     }
 
+    private function pickUrl(array $payload, array $paths): ?string
+    {
+        foreach ($paths as $path) {
+            $value = $this->pick($payload, [$path]);
+
+            if (! is_string($value) || trim($value) === '') {
+                continue;
+            }
+
+            $value = trim($value);
+
+            if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+                return $value;
+            }
+        }
+
+        return null;
+    }
+
     private function dotGet(array $payload, string $path): mixed
     {
         $segments = explode('.', $path);
@@ -164,6 +191,21 @@ final class BraveSearchProvider implements ProductImageSearchProviderInterface
         }
 
         return parse_url($url, PHP_URL_HOST) ?: null;
+    }
+
+    private function normalizeDomain(mixed $domain): ?string
+    {
+        if (! is_string($domain) || trim($domain) === '') {
+            return null;
+        }
+
+        $domain = trim($domain);
+
+        if (str_starts_with($domain, 'http://') || str_starts_with($domain, 'https://')) {
+            return $this->extractDomain($domain);
+        }
+
+        return preg_match('/^[a-z0-9.-]+\.[a-z]{2,}$/i', $domain) === 1 ? strtolower($domain) : null;
     }
 
     private function normalizeInt(mixed $value): ?int

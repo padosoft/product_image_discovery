@@ -1,0 +1,24 @@
+{
+  "client_id": 1,
+  "erp_model_id": "HERNO-PI002223D",
+  "erp_model_color_id": "HERNO-PI002223D-CAMMELLO",
+  "erp_model_color_size_id": null,
+  "brand": "Herno",
+  "supplier": "Herno",
+  "sku": "HERNO-PI002223D-CAMMELLO",
+  "supplier_sku": "PI002223D",
+  "model_code": "PI002223D",
+  "color_code": "CAMMELLO",
+  "color_name": "Cammello",
+  "ean": null,
+  "season": null,
+  "category": "Donna > Maglie e camicie > Felpe e maglie",
+  "material": "100% Nylon",
+  "metadata": {
+    "title": "Cappa In Nylon Ultralight Cammello",
+    "description": "Cappa da donna in nylon ultralight Herno modello PI002223D.",
+    "extended_description": "Cappa da donna in nylon ultralight, Herno, modello PI002223D, tessuto: nylon ultralight, fantasia: tinta unita, maniche: lunghe, collo: classico, chiusura: zip frontale, tasche: a filetto, dettagli: trapuntatura orizzontale, imbottitura leggera, polsini con bottone, foderato: si, vestibilita: regolare.",
+    "composition": "100% Nylon",
+    "notes": "ERP/PIM request example for live discovery. Do not provide an image URL or source page URL; the package should discover them."
+  }
+}

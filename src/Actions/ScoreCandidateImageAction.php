@@ -155,7 +155,8 @@ final class ScoreCandidateImageAction
             $strongMatches[] = 'ean';
         }
 
-        if (TextNormalizer::containsExactCode($corpus, $identity->supplierSku)) {
+        if (TextNormalizer::containsExactCode($corpus, $identity->supplierSku)
+            || TextNormalizer::containsCodePrefix($corpus, $identity->supplierSku)) {
             $score += 35;
             $matches[] = 'supplier_sku';
             $strongMatches[] = 'supplier_sku';
@@ -167,7 +168,8 @@ final class ScoreCandidateImageAction
             $strongMatches[] = 'sku';
         }
 
-        if (TextNormalizer::containsExactCode($corpus, $identity->modelCode)) {
+        if (TextNormalizer::containsExactCode($corpus, $identity->modelCode)
+            || TextNormalizer::containsCodePrefix($corpus, $identity->modelCode)) {
             $score += 35;
             $matches[] = 'model_code';
             $strongMatches[] = 'model_code';

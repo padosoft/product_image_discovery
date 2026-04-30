@@ -22,7 +22,7 @@ The package gives you a conservative pipeline, an API for ingestion and review, 
 - Laravel native: service provider, config, migrations, Eloquent models, form requests, resources, Sanctum-friendly middleware and queue jobs.
 - Provider-ready: search providers are configured in the database and resolved through a manager.
 - Browser optional: Playwright runs in a separate Node sidecar and is not required for basic usage.
-- AI-ready, not AI-dependent: LLM/vision features can be added behind config without making the core fragile.
+- AI-assisted, not AI-dependent: optional LLM/vision verification can enrich decisions without making the core fragile.
 - Testable offline: the default test suite uses SQLite, fake providers and deterministic sidecar tests.
 
 ## What It Does
@@ -126,6 +126,8 @@ QUEUE_CONNECTION=sync
 FILESYSTEM_DISK=local
 PRODUCT_IMAGE_DISCOVERY_ROUTE_PREFIX=api/product-image-discovery
 PRODUCT_IMAGE_DISCOVERY_STORAGE_DISK=local
+PRODUCT_IMAGE_DISCOVERY_DEBUG_STOP_ON_FIRST_GOOD=true
+PRODUCT_IMAGE_DISCOVERY_DEBUG_GOOD_SCORE_THRESHOLD=65
 ```
 
 ### 3. Publish the config
@@ -239,6 +241,8 @@ QUEUE_CONNECTION=sync
 FILESYSTEM_DISK=local
 PRODUCT_IMAGE_DISCOVERY_ROUTE_PREFIX=api/product-image-discovery
 PRODUCT_IMAGE_DISCOVERY_STORAGE_DISK=local
+PRODUCT_IMAGE_DISCOVERY_DEBUG_STOP_ON_FIRST_GOOD=true
+PRODUCT_IMAGE_DISCOVERY_DEBUG_GOOD_SCORE_THRESHOLD=65
 ```
 
 Then generate the app key:
@@ -418,6 +422,136 @@ Disable the fake provider when you want only live search results:
 \Padosoft\ProductImageDiscovery\Models\ProductImageSearchProvider::where('code', 'fake-smoke')->update(['is_active' => false]);
 ```
 
+## Debug Flow Command
+
+The package includes a console command for full live debugging from a request JSON file. It runs the same pipeline jobs as the queue flow and streams a step-by-step console trace: ingest, generated queries, sites/images found, candidate verification order, every candidate examined, score components, deterministic evidence, optional AI output, download path, hash, quality analysis, errors and final decision.
+
+Before verification, the command ranks candidates with deterministic scoring, so constrained runs start from the strongest product identity match and avoid spending live AI calls on obvious wrong-color or wrong-model candidates first. Use `--report=...` to keep the complete JSON report on disk; use `--json` when you need machine-readable output instead of the live console trace.
+
+Where to run it:
+
+- Inside a host Laravel app that installed the package, use `php artisan ...`.
+- Inside this package repository, there is no `artisan` file. Use Orchestra Testbench through `vendor/bin/testbench`.
+
+What you see on screen:
+
+- ASCII art header, so debug runs are easy to spot in terminal history.
+- Request ingest: JSON file path, `client_id`, `erp_model_color_id`, brand, model and color identity.
+- Search step: provider used, generated queries, query weights, result count and provider attempts.
+- Found sites and images: source domain, page URL, image URL, title and image dimensions for each provider result.
+- Extraction step: candidate ids and source pages retained from the search results.
+- Candidate plan: deterministic debug rank and the exact order in which candidates will be examined.
+- Per-candidate verification: candidate URL, source page, source policy, score components, final score, matches, mismatches, strong matches and rejection reason.
+- AI verification output when enabled: provider, model, status, match flags, confidence, brand/model/color/type/quality booleans, AI rejection reason, notes and errors.
+- Download step: selected candidate id, remote image URL, local storage path, MIME type, bytes and SHA-256 hash.
+- Quality analysis: pass/fail, quality score, dimensions, MIME type and quality issues.
+- Final decision: request status, selected/best candidate id, final score, verified match count and report path.
+- Audit events: persisted event type, level, candidate id and JSON context for later inspection.
+
+```bash
+php artisan product-image-discovery:debug-flow examples/requests/herno-cappa-nylon-ultralight-cammello.json
+```
+
+That `php artisan` form only works from a Laravel app root. If you run it from the package root and see `Could not open input file: artisan`, use the Testbench commands in the Herno example below.
+
+Useful options:
+
+```bash
+php artisan product-image-discovery:debug-flow examples/requests/herno-cappa-nylon-ultralight-cammello.json \
+  --fresh \
+  --max-candidates=10 \
+  --report=storage/app/product-image-discovery/debug/herno-flow.json
+```
+
+- `--fresh`: deletes the existing request for the same `client_id + erp_model_color_id` before running.
+- `--max-candidates=10`: limits how many discovered candidates are verified in this debug run.
+- `--report=...`: writes the complete JSON report to disk while still printing the formatted console output.
+- `--json`: prints only the JSON report and disables the live console trace.
+- `--no-download`: skips download and quality assessment.
+- `--download-all`: downloads and quality-assesses every verified candidate; by default only the best verified candidate is downloaded.
+- `--stop-on-first-good`: stops verifying more candidates after a good verified candidate is found.
+- `--exhaustive`: verifies every candidate up to `--max-candidates`, ignoring the early-stop setting.
+- `--good-score=65`: overrides the score threshold used by early stop.
+- `--migrate`: runs migrations first, useful in local demo/Testbench environments.
+- `--no-env-brave`: disables automatic creation of a `brave-live-debug` provider from `BRAVE_SEARCH_API_KEY`.
+- `--fail-on-no-match`: exits with a failure code when no candidate reaches `verified_match`.
+
+Early stop is controlled by:
+
+```env
+PRODUCT_IMAGE_DISCOVERY_DEBUG_STOP_ON_FIRST_GOOD=true
+PRODUCT_IMAGE_DISCOVERY_DEBUG_GOOD_SCORE_THRESHOLD=65
+```
+
+With early stop enabled, the command stops candidate verification when a verified candidate is good enough because it comes from an auto-publish/trusted source, the source domain contains the brand, or its final score reaches the configured threshold. Use `--exhaustive` when you intentionally want to inspect all candidates up to `--max-candidates`.
+
+To inspect and download every verified candidate in a broad run, combine:
+
+```bash
+php artisan product-image-discovery:debug-flow examples/requests/herno-cappa-nylon-ultralight-cammello.json \
+  --exhaustive \
+  --download-all \
+  --max-candidates=10
+```
+
+### Herno Live Debug Example
+
+The repository includes a real fashion request example without any source page or image URL:
+
+```text
+examples/requests/herno-cappa-nylon-ultralight-cammello.json
+```
+
+It describes:
+
+- Brand: `Herno`
+- Model/code: `PI002223D`
+- Product: `Cappa In Nylon Ultralight Cammello`
+- Color: `Cammello`
+- Category: `Donna > Maglie e camicie > Felpe e maglie`
+- Material: `100% Nylon`
+
+Run it in a host Laravel app:
+
+```bash
+php artisan product-image-discovery:debug-flow examples/requests/herno-cappa-nylon-ultralight-cammello.json \
+  --fresh \
+  --max-candidates=10 \
+  --report=storage/app/product-image-discovery/debug/herno-flow.json
+```
+
+Run it from this package with Testbench on Windows PowerShell:
+
+```powershell
+$env:APP_KEY = 'base64:' + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(('a' * 32)))
+$env:DB_CONNECTION='sqlite'
+$env:DB_DATABASE=':memory:'
+$request = (Resolve-Path .\examples\requests\herno-cappa-nylon-ultralight-cammello.json).Path
+$report = Join-Path (Get-Location) 'storage\debug\herno-flow.json'
+& 'C:\Users\lopad\.config\herd\bin\php84\php.exe' vendor\bin\testbench product-image-discovery:debug-flow $request --migrate --fresh --max-candidates=10 --report=$report
+```
+
+Run it from this package with Testbench on macOS/Linux shell:
+
+```bash
+export APP_KEY="$(php -r 'echo "base64:".base64_encode(str_repeat("a", 32));')"
+export DB_CONNECTION=sqlite
+export DB_DATABASE=':memory:'
+request="$(pwd)/examples/requests/herno-cappa-nylon-ultralight-cammello.json"
+report="$(pwd)/storage/debug/herno-flow.json"
+php vendor/bin/testbench product-image-discovery:debug-flow "$request" --migrate --fresh --max-candidates=10 --report="$report"
+```
+
+With `BRAVE_SEARCH_API_KEY` configured, the command auto-creates a `brave-live-debug` provider and shows the live Brave image results. With AI enabled and `PRODUCT_IMAGE_DISCOVERY_AI_ATTACH_REMOTE_IMAGE=true`, it also sends each verified candidate image URL to the configured vision model and prints the full AI verification result.
+
+In the local Herno run, the trace found the official `us.herno.com` image, downloaded it under `product-image-discovery/{request_id}/{candidate_id}.jpg`, quality-checked it, printed the SHA-256 hash, and kept the request in `manual_review` because the source was not configured as auto-publishable. External results and AI wording can change, so treat the report as the source of truth for each run.
+
+Console screenshots:
+
+![Debug flow command ingest and search trace](resources/artisan-command-01.png)
+
+![Debug flow command candidate ranking and scoring trace](resources/artisan-command-02.png)
+
 ## Quickstart
 
 Send a product-color payload:
@@ -494,6 +628,7 @@ examples/requests/
 
 - `erp-product-image-discovery-request.example.json`: generic ERP/PIM template without image/source URLs.
 - `nike-air-force-1-live.json`: concrete Nike smoke-test payload.
+- `herno-cappa-nylon-ultralight-cammello.json`: concrete Herno fashion payload for live discovery/debug flow testing.
 
 ### Nike Air Force 1 07, White/White
 
@@ -651,12 +786,17 @@ PRODUCT_IMAGE_DISCOVERY_AI_PROVIDER=anthropic
 PRODUCT_IMAGE_DISCOVERY_AI_TIMEOUT=45
 PRODUCT_IMAGE_DISCOVERY_AI_FAIL_SILENTLY=true
 PRODUCT_IMAGE_DISCOVERY_AI_ATTACH_REMOTE_IMAGE=false
+PRODUCT_IMAGE_DISCOVERY_AI_VISION_MODEL=claude-sonnet-4-5-20250929
+PRODUCT_IMAGE_DISCOVERY_AI_DESCRIPTION_MODEL=claude-haiku-4-5-20251001
 OPENAI_API_KEY=
 OPENAI_URL=https://api.openai.com/v1
+OPENAI_BASE_URL=
 ANTHROPIC_API_KEY=
 ANTHROPIC_URL=https://api.anthropic.com/v1
+ANTHROPIC_BASE_URL=
 OPENROUTER_API_KEY=
 OPENROUTER_URL=https://openrouter.ai/api/v1
+OPENROUTER_BASE_URL=
 ```
 
 To enable AI verification:
@@ -674,10 +814,12 @@ PRODUCT_IMAGE_DISCOVERY_AI_ENABLED=true
 PRODUCT_IMAGE_DISCOVERY_AI_PROVIDER=openrouter
 OPENROUTER_API_KEY=your-key
 OPENROUTER_URL=https://openrouter.ai/api/v1
-PRODUCT_IMAGE_DISCOVERY_AI_VISION_MODEL=anthropic/claude-haiku-4.5
+PRODUCT_IMAGE_DISCOVERY_AI_VISION_MODEL=your-openrouter-vision-model-id
 ```
 
 By default, remote image attachments are disabled and the verifier sends product/candidate metadata only. Set `PRODUCT_IMAGE_DISCOVERY_AI_ATTACH_REMOTE_IMAGE=true` when you want the selected provider/model to inspect the candidate image URL directly. Keep this opt-in because not every provider/model supports remote image attachments.
+
+For Anthropic, `PRODUCT_IMAGE_DISCOVERY_AI_VISION_MODEL=claude-sonnet-4-5-20250929` is a strong default for visual/product verification, while `PRODUCT_IMAGE_DISCOVERY_AI_DESCRIPTION_MODEL=claude-haiku-4-5-20251001` is a lower-cost default for description-style support tasks. If you switch to OpenAI or OpenRouter, set model names supported by that provider.
 
 ## Testing
 
@@ -706,13 +848,21 @@ The current local verification used Herd PHP 8.4:
 & 'C:\Users\lopad\.config\herd\bin\php84\php.exe' vendor\bin\phpunit --testsuite Unit,Feature,E2E
 ```
 
-Latest verified result:
+In a fresh offline environment, live sidecar/search/AI checks are skipped cleanly unless their credentials or URLs are provided. The current local verification with real `BRAVE_SEARCH_API_KEY`, real `ANTHROPIC_API_KEY` and remote AI image attachments enabled is:
 
 ```text
-48 tests, 213 assertions, 1 skipped
+60 tests, 276 assertions, 1 skipped
 ```
 
-The skipped test is an opt-in live sidecar contract test. Set `SIDECAR_E2E_URL` when you want to test against a real running sidecar.
+The skipped test is the live sidecar contract. Set `SIDECAR_E2E_URL` to test against a real running sidecar. Live search and AI checks require their provider credentials.
+
+Run the live AI verifier explicitly when you have a real Anthropic, OpenRouter or OpenAI key in `.env`:
+
+```powershell
+& 'C:\Users\lopad\.config\herd\bin\php84\php.exe' vendor\bin\phpunit --testsuite E2E --filter LiveProductImageAiVerifierTest
+```
+
+With `PRODUCT_IMAGE_DISCOVERY_AI_ATTACH_REMOTE_IMAGE=true`, this live test sends a real product image URL to the provider and should pass with `1 test`, `9 assertions`.
 
 ## Database Tables
 
@@ -735,7 +885,7 @@ The skipped test is an opt-in live sidecar contract test. Set `SIDECAR_E2E_URL` 
 ## Roadmap
 
 - First-party SerpAPI and Google Custom Search drivers.
-- Optional live LLM/vision verification provider contracts.
+- Richer AI review signals while keeping deterministic checks as the publication gate.
 - Richer duplicate detection through perceptual hashing.
 - Image enhancement pipeline behind explicit config.
 - Admin UI starter kit for review teams.

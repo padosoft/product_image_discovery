@@ -21,7 +21,9 @@ final class BraveSearchProviderTest extends TestCase
             'https://api.search.brave.com/res/v1/images/search*' => \Illuminate\Support\Facades\Http::response([
                 'results' => [[
                     'title' => 'Brand Model',
-                    'source' => 'https://shop.example.test/products/brand-model',
+                    'url' => 'https://shop.example.test/products/brand-model',
+                    'source' => 'shop.example.test',
+                    'page_fetched' => '2026-03-06T15:49:26Z',
                     'thumbnail' => ['src' => 'https://cdn.example.test/thumb.jpg'],
                     'properties' => [
                         'url' => 'https://cdn.example.test/hero.jpg',
@@ -45,6 +47,7 @@ final class BraveSearchProviderTest extends TestCase
         ]));
 
         self::assertCount(1, $results);
+        self::assertSame('https://shop.example.test/products/brand-model', $results->first()?->pageUrl);
         self::assertSame('https://cdn.example.test/hero.jpg', $results->first()?->imageUrl);
         self::assertSame('shop.example.test', $results->first()?->sourceDomain);
     }

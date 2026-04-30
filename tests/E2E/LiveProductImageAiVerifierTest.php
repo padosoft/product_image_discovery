@@ -20,11 +20,12 @@ final class LiveProductImageAiVerifierTest extends TestCase
         [$providerName, $apiKey] = $provider;
         $model = $this->envValue('PRODUCT_IMAGE_DISCOVERY_AI_VISION_MODEL')
             ?: $this->envValue('PRODUCT_IMAGE_DISCOVERY_AI_DESCRIPTION_MODEL');
+        $attachRemoteImage = $this->envBool('PRODUCT_IMAGE_DISCOVERY_AI_ATTACH_REMOTE_IMAGE');
 
         config()->set('product-image-discovery.ai.enabled', true);
         config()->set('product-image-discovery.ai.provider', $providerName);
         config()->set('product-image-discovery.ai.fail_silently', false);
-        config()->set('product-image-discovery.ai.attach_remote_image', false);
+        config()->set('product-image-discovery.ai.attach_remote_image', $attachRemoteImage);
         config()->set("product-image-discovery.ai.providers.{$providerName}.api_key", $apiKey);
         config()->set('product-image-discovery.ai.vision_model', $model);
         config()->set('ai.default', $providerName);
@@ -46,12 +47,13 @@ final class LiveProductImageAiVerifierTest extends TestCase
             'brand' => 'Nike',
             'model_code' => 'Air Force 1 07',
             'color_name' => 'White',
+            'color_code' => 'CW2288-111',
             'category' => 'Sneakers',
             'material' => 'Leather',
         ], [
             'title' => "Nike Air Force 1 '07 Men's Shoes White",
             'source_page_url' => 'https://www.nike.com/t/air-force-1-07-mens-shoes-jBrhbr',
-            'image_url' => 'https://static.nike.com/a/images/t_prod/w_1200/air-force-1-07.jpg',
+            'image_url' => 'https://static.nike.com/a/images/t_web_pdp_535_v2/f_auto%2Cu_9ddf04c7-2a9a-4d76-add1-d15af8f0263d%2Cc_scale%2Cfl_relative%2Cw_1.0%2Ch_1.0%2Cfl_layer_apply/b7d9211c-26e7-431a-ac24-b0540fb3c00f/AIR%2BFORCE%2B1%2B%2707.png',
             'source_domain' => 'nike.com',
             'width' => 1200,
             'height' => 1200,
@@ -61,6 +63,7 @@ final class LiveProductImageAiVerifierTest extends TestCase
         self::assertTrue($result->available);
         self::assertSame('completed', $result->status);
         self::assertSame($providerName, $result->provider);
+        self::assertSame($attachRemoteImage, (bool) config('product-image-discovery.ai.attach_remote_image'));
         self::assertGreaterThanOrEqual(0, $result->confidence);
         self::assertLessThanOrEqual(100, $result->confidence);
         self::assertNotSame('', $result->notes);
@@ -143,5 +146,16 @@ final class LiveProductImageAiVerifierTest extends TestCase
         }
 
         return null;
+    }
+
+    private function envBool(string $key): bool
+    {
+        $value = $this->envValue($key);
+
+        if ($value === null) {
+            return false;
+        }
+
+        return in_array(strtolower($value), ['1', 'true', 'yes', 'on'], true);
     }
 }

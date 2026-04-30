@@ -128,6 +128,23 @@ final class TextNormalizer
         return in_array($code, self::extractCodeTokens($haystack), true);
     }
 
+    public static function containsCodePrefix(string $haystack, ?string $code): bool
+    {
+        $code = self::normalizeCode($code);
+
+        if ($code === null || strlen($code) < 6) {
+            return false;
+        }
+
+        foreach (self::extractCodeTokens($haystack) as $token) {
+            if ($token === $code || str_starts_with($token, $code)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * @return list<string>
      */

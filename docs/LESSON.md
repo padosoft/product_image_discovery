@@ -23,11 +23,14 @@
 - Use SQLite in-memory for Eloquent/Testbench tests.
 - Verified PHP gate:
   - `& 'C:\Users\lopad\.config\herd\bin\php84\php.exe' vendor\bin\phpunit --testsuite Unit,Feature,E2E`
-  - Latest result: PASS, `48 tests`, `213 assertions`, `1 skipped`.
-- The skipped E2E test is the opt-in live sidecar contract and requires `SIDECAR_E2E_URL`.
+  - Latest result with live `BRAVE_SEARCH_API_KEY`, live `ANTHROPIC_API_KEY` and remote image attachment enabled: PASS, `60 tests`, `276 assertions`, `1 skipped`.
+- The skipped E2E/live tests are opt-in and require `SIDECAR_E2E_URL` or an AI provider key. When `ANTHROPIC_API_KEY` is present, only the sidecar contract remains skipped unless `SIDECAR_E2E_URL` is also configured in the process environment.
 - Verified sidecar gate:
   - `npm test` inside `sidecar`
   - Latest result: PASS, `7/7`.
+- Verified opt-in live Anthropic AI verifier:
+  - `& 'C:\Users\lopad\.config\herd\bin\php84\php.exe' vendor\bin\phpunit --testsuite E2E --filter LiveProductImageAiVerifierTest`
+  - Latest result with `ANTHROPIC_API_KEY` and `PRODUCT_IMAGE_DISCOVERY_AI_ATTACH_REMOTE_IMAGE=true`: PASS, `1 test`, `9 assertions`.
 - Keep external network, search APIs, browser downloads and LLM calls out of the default suite. Add them only as explicit opt-in tests.
 
 ## Architecture Decisions
@@ -59,6 +62,15 @@
 - Laravel AI SDK v0.6.5 supports `Lab::Anthropic`, `Lab::OpenAI` and `Lab::OpenRouter`. Use the SDK's env names (`ANTHROPIC_URL`, `OPENAI_URL`, `OPENROUTER_URL`) rather than package-specific `*_BASE_URL` names.
 - Keep AI verification optional. It should enrich `ai_analysis` and visual confidence, but deterministic checks remain the safety gate.
 - Remote image attachments are provider/model dependent. Keep `PRODUCT_IMAGE_DISCOVERY_AI_ATTACH_REMOTE_IMAGE=false` by default and make live attachment tests opt-in.
+- For Anthropic live verification, stable model ids used locally: `claude-sonnet-4-5-20250929` for vision verification and `claude-haiku-4-5-20251001` for description-style support.
+- Codex/local skills must include YAML frontmatter delimited by `---`; otherwise the agent runtime skips the skill before any repo work starts.
+- Brave image search payloads are not shaped like web search payloads. Use `properties.url` for the actual image URL, `url` for the page URL, and keep `page_fetched` as provider metadata only.
+- Fashion product codes are often concatenated with fabric/color suffixes (`PI002223D12017Z2157`). Prefix matching is useful for long normalized codes, but keep it disabled for short codes to avoid false positives.
+- In Eloquent candidates, the default `final_score` can be `0` before verification. Debug tooling must not treat a `candidate` row with score `0` as already ranked; compute a deterministic pre-rank before spending live AI calls.
+- Testbench resolves relative command arguments from its skeleton Laravel app. For package-local debug files, pass absolute request/report paths.
+- A Laravel package root does not have an `artisan` file. `php artisan ...` is for host Laravel apps; from the package repo use `vendor/bin/testbench ...`.
+- Live LLM vision can disagree conservatively on ERP color naming when the image URL uses a numeric vendor color code. Preserve the AI disagreement in the report and keep the result in manual review unless a trusted source/policy resolves the ambiguity.
+- Live image downloads can be blocked by Cloudflare/third-party anti-bot pages after search and verification succeed. Live E2E tests should try alternate verified candidates and skip cleanly only when all external downloads are blocked.
 
 ## Future Session Rules
 

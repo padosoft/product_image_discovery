@@ -1,3 +1,8 @@
+---
+name: product-image-discovery
+description: Use when working on the padosoft/product-image-discovery Laravel package, including product image discovery, matching, scoring, queue jobs, API endpoints, search providers, trusted source logic, anti-false-positive checks, image quality rules, optional sidecar behavior, tests, docs, installation instructions, and release readiness.
+---
+
 # Product Image Discovery Package Skill
 
 Use this skill when working on the `padosoft/product-image-discovery` Laravel package.

@@ -51,6 +51,11 @@ return [
         'disk' => env('PRODUCT_IMAGE_DISCOVERY_STORAGE_DISK', 'local'),
     ],
 
+    'debug' => [
+        'stop_on_first_good' => env('PRODUCT_IMAGE_DISCOVERY_DEBUG_STOP_ON_FIRST_GOOD', true),
+        'good_score_threshold' => (int) env('PRODUCT_IMAGE_DISCOVERY_DEBUG_GOOD_SCORE_THRESHOLD', 65),
+    ],
+
     'defaults' => [
         'search_max_queries_per_product' => 8,
         'search_max_results_per_query' => 20,
