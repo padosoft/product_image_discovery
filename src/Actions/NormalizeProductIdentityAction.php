@@ -23,7 +23,7 @@ final class NormalizeProductIdentityAction
             'model_code' => $this->read($request, ['model_code', 'modelCode']),
             'color_code' => $this->read($request, ['color_code', 'colorCode']),
             'color_name' => $this->read($request, ['color_name', 'colorName']),
-            'ean' => $this->read($request, ['ean', 'gtin', 'gtin13']),
+            'ean' => $this->read($request, ['ean', 'barcode', 'bar_code', 'gtin', 'gtin13', 'gtin14']),
             'season' => $this->read($request, ['season']),
             'category' => $this->read($request, ['category']),
             'material' => $this->read($request, ['material']),

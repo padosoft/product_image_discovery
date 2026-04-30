@@ -74,6 +74,7 @@
 - Testbench can reuse request ids across runs because the debug app often uses SQLite in-memory, while `vendor/orchestra/testbench-core/laravel/storage/...` persists. Debug runs must clean `product-image-discovery/{request_id}` storage when using `--fresh` or stale files from older live tests can be mistaken for newly downloaded candidates.
 - For fashion colors, `cammello/camel/tan/beige/biscuit/light brown` should be treated as the same visual color family. A page title containing both `marrone` and `cammello` must not become a hard `WRONG_COLOR` when the requested ERP color is `cammello`.
 - Vision AI should evaluate the attached image first for visible product type and visible color. Numeric vendor color codes in URLs/DOM are supporting metadata, not color names; high-confidence visible mismatches should become hard mismatch evidence, while low-confidence AI disagreement should not override deterministic brand/model/color matches.
+- Real EAN/barcode/GTIN values are very strong product identity signals. Accept common aliases (`barcode`, `bar_code`, `gtin`, `gtin13`, `gtin14`) but normalize them into `ean`; exact matches should be strong matches, while structured GTIN mismatches should be wrong-product risk.
 
 ## Future Session Rules
 

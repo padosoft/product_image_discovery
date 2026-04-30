@@ -52,7 +52,15 @@ final readonly class ProductIdentityData implements JsonSerializable
             modelCode: TextNormalizer::nullableString($data['model_code'] ?? $data['modelCode'] ?? null),
             colorCode: TextNormalizer::nullableString($data['color_code'] ?? $data['colorCode'] ?? null),
             colorName: TextNormalizer::nullableString($data['color_name'] ?? $data['colorName'] ?? null),
-            ean: TextNormalizer::normalizeEan(TextNormalizer::nullableString($data['ean'] ?? $data['gtin'] ?? null)),
+            ean: TextNormalizer::normalizeEan(TextNormalizer::nullableString(
+                $data['ean']
+                ?? $data['barcode']
+                ?? $data['bar_code']
+                ?? $data['gtin']
+                ?? $data['gtin13']
+                ?? $data['gtin14']
+                ?? null
+            )),
             season: TextNormalizer::nullableString($data['season'] ?? null),
             category: TextNormalizer::nullableString($data['category'] ?? null),
             material: TextNormalizer::nullableString($data['material'] ?? null),

@@ -14,6 +14,10 @@ Find the right product image, not just any image.
 
 The package gives you a conservative pipeline, an API for ingestion and review, database-backed configuration, queue-ready jobs, audit events and an optional Playwright sidecar for pages that need browser rendering.
 
+## Responsible Use Disclaimer
+
+Use this package only for lawful, authorized product image discovery workflows. Do not use it to abuse third-party services, bypass access controls, overload websites, violate robots.txt or source terms, or collect images from sources where you do not have explicit permission or another valid legal basis. Configure trusted sources, rate limits and manual review policies conservatively, and use it only on websites, suppliers, brand sources or search providers that you are allowed to access for this purpose.
+
 ## Why This Package
 
 - Conservative by design: it optimizes for low false positives.
@@ -628,6 +632,32 @@ curl -X POST "https://your-app.test/api/product-image-discovery/requests/1/candi
   -d '{"reason": "wrong_color", "notes": "The image shows the white variant."}'
 ```
 
+## EAN / Barcode Matching
+
+`ean` is optional, but when your ERP/PIM/supplier has the real product barcode it is one of the strongest identity signals in the package.
+
+Accepted payload aliases:
+
+```text
+ean
+barcode
+bar_code
+gtin
+gtin13
+gtin14
+```
+
+The API normalizes these aliases into the stored `ean` field. When `ean` is present:
+
+- search query generation tries the brand + EAN query first with the highest weight;
+- source patterns can use `{ean}`;
+- textual matches against the discovered page/image metadata count as a strong product identity match;
+- structured data matches against `gtin`, `gtin8`, `gtin12`, `gtin13`, `gtin14` or `ean` count as a strong match;
+- a structured GTIN/EAN mismatch is treated as a wrong-product risk;
+- even an exact EAN match does not override crucial contradictions such as wrong visible color, wrong product type, wrong brand, permission limits or low-quality image evidence.
+
+Do not invent barcodes for smoke tests. Leave `ean`/`barcode` empty unless the value comes from the real catalog, supplier or product feed.
+
 ## Real Product Payload Examples
 
 These examples are realistic ERP/PIM payloads for products that also exist on public fashion sites. The request intentionally does not include an image URL or product page URL: discovering that page/image is the job of the package. Ecommerce pages can change, go out of stock or block automated access, so treat these as smoke-test payloads rather than permanent fixtures. Do not invent EANs: leave `ean` empty unless your ERP/PIM has the real barcode.
@@ -863,7 +893,7 @@ The current local verification used Herd PHP 8.4:
 In a fresh offline environment, live sidecar/search/AI checks are skipped cleanly unless their credentials or URLs are provided. The current local verification with real `BRAVE_SEARCH_API_KEY`, real `ANTHROPIC_API_KEY` and remote AI image attachments enabled is:
 
 ```text
-60 tests, 276 assertions, 1 skipped
+72 tests, 319 assertions, 1 skipped
 ```
 
 The skipped test is the live sidecar contract. Set `SIDECAR_E2E_URL` to test against a real running sidecar. Live search and AI checks require their provider credentials.
@@ -888,11 +918,16 @@ With `PRODUCT_IMAGE_DISCOVERY_AI_ATTACH_REMOTE_IMAGE=true`, this live test sends
 
 ## Safety Notes
 
+- Use the package only for lawful, authorized discovery activity and only on sources you are allowed to access.
 - Respect robots.txt and source terms.
 - Prefer official supplier, brand or trusted retailer sources.
 - Do not publish images when license, ownership or product correctness is unclear.
 - Keep manual review in the flow for uncertain matches.
 - Treat watermarks, text overlays, placeholders and low-resolution images as quality risks.
+
+## Admin UI Guidance
+
+This package stays headless. If you want to integrate a review/configuration experience inside an existing ecommerce admin, use [docs/ADMIN_UI_UX_GUIDELINES.md](docs/ADMIN_UI_UX_GUIDELINES.md). It describes the recommended vanilla JavaScript screens, components, filters, debug report viewer, guided debug-flow runner, provider credential status and API calls.
 
 ## Roadmap
 
@@ -900,7 +935,7 @@ With `PRODUCT_IMAGE_DISCOVERY_AI_ATTACH_REMOTE_IMAGE=true`, this live test sends
 - Richer AI review signals while keeping deterministic checks as the publication gate.
 - Richer duplicate detection through perceptual hashing.
 - Image enhancement pipeline behind explicit config.
-- Admin UI starter kit for review teams.
+- Host-admin UI integration examples.
 - GitHub Actions workflow for PHP, Node and static analysis.
 
 ## Contributing

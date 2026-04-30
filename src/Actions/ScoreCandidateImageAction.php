@@ -154,6 +154,7 @@ final class ScoreCandidateImageAction
             $score += 40;
             $matches[] = 'ean';
             $strongMatches[] = 'ean';
+            $flags['model_matched'] = true;
         }
 
         if (TextNormalizer::containsExactCode($corpus, $identity->supplierSku)
@@ -252,9 +253,11 @@ final class ScoreCandidateImageAction
             if ($identity->ean === $gtin) {
                 $score += 45;
                 $matches[] = 'structured_gtin';
-                $strongMatches[] = 'gtin';
+                $strongMatches[] = 'ean';
+                $flags['model_matched'] = true;
             } else {
                 $mismatches[] = 'structured_gtin_mismatch';
+                $flags['model_mismatch'] = true;
             }
         }
 

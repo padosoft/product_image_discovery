@@ -117,6 +117,24 @@ Implementare il modulo Product Image Discovery & Verification come package Larav
   - Storage folder after the run contained only `1.JPG`, confirming stale files were removed.
 - Composer validate strict: PASS.
 - PHPUnit Unit/Feature/E2E: PASS, `66 tests`, `300 assertions`, `1 skipped`.
+- Added `docs/ADMIN_UI_UX_GUIDELINES.md`, a host-admin UI/UX specification for integrating a vanilla JavaScript Laravel admin experience while keeping this package headless.
+- Linked the admin UI guidance from README and adjusted the roadmap from a package UI starter kit toward host-admin integration examples.
+- Added a README responsible-use disclaimer for lawful, authorized source access only.
+- Strengthened EAN/barcode support:
+  - API request/search validation now accepts `barcode`, `bar_code`, `gtin`, `gtin13` and `gtin14` aliases and normalizes them into `ean`.
+  - Product identity normalization accepts the same aliases.
+  - EAN search remains the highest-weight query.
+  - Exact textual/structured EAN matches now count as strong product identity matches.
+  - Structured GTIN/EAN mismatch is now treated as wrong-product risk.
+- Added regression coverage for barcode aliases, EAN-first query generation, API search by barcode alias, EAN strong match and GTIN mismatch rejection.
+- Composer validate strict: PASS.
+- PHPUnit Unit/Feature/E2E: PASS, `72 tests`, `319 assertions`, `1 skipped`.
+- Live debug command with real Brave/Anthropic credentials after EAN/barcode changes:
+  - Report: `storage/debug/herno-after-ean-barcode-update.json`.
+  - Query: `"Herno" "PI002223D" "CAMMELLO"`.
+  - Candidate `1` from `mariodannashop.it` reached `quality_passed`.
+  - Final score: `99`; quality score: `100`.
+  - AI: `match=true`, `color_match=true`, `product_type_match=true`, `confidence=90`.
 
 ### Live Herno Debug Result
 

@@ -72,4 +72,18 @@ final class GenerateSearchQueriesActionTest extends TestCase
         self::assertGreaterThan(0, $bareSupplierIndex);
         self::assertSame('"Herno" "PI002223D"', $queries[$bareSupplierIndex]->query);
     }
+
+    public function test_it_prioritizes_barcode_alias_as_ean_query(): void
+    {
+        $identity = ProductIdentityData::fromArray([
+            'brand' => 'Acme',
+            'barcode' => '8012345678901',
+            'supplier_sku' => 'SKU-1',
+        ]);
+
+        $queries = (new GenerateSearchQueriesAction())->handle($identity, [], ['max_queries' => 2]);
+
+        self::assertSame('"Acme" "8012345678901"', $queries[0]->query);
+        self::assertSame('ean', $queries[0]->intent);
+    }
 }

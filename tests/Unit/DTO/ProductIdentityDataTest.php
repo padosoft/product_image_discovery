@@ -47,4 +47,27 @@ final class ProductIdentityDataTest extends TestCase
 
         self::assertSame('Cappa In Nylon Ultralight Cammello', $identity->description);
     }
+
+    public function test_it_accepts_barcode_aliases_as_ean(): void
+    {
+        $identity = ProductIdentityData::fromArray([
+            'brand' => 'Acme',
+            'barcode' => ' 80 12345 678901 ',
+        ]);
+
+        self::assertSame('8012345678901', $identity->ean);
+        self::assertTrue($identity->hasStrongIdentifier());
+    }
+
+    public function test_normalize_action_reads_gtin_alias_as_ean(): void
+    {
+        $identity = (new NormalizeProductIdentityAction())->handle([
+            'client_id' => 10,
+            'erp_model_id' => 'M-1',
+            'erp_model_color_id' => 'M-1-BLK',
+            'gtin13' => '80 12345 678901',
+        ]);
+
+        self::assertSame('8012345678901', $identity->ean);
+    }
 }

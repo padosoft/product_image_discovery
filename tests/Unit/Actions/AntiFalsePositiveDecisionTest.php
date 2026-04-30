@@ -185,6 +185,54 @@ final class AntiFalsePositiveDecisionTest extends TestCase
         self::assertContains('structured_color', $score->evidence['matches']);
     }
 
+    public function test_matching_ean_is_a_strong_product_identity_signal(): void
+    {
+        $identity = ProductIdentityData::fromArray([
+            'brand' => 'Acme',
+            'ean' => '8012345678901',
+            'color_name' => 'black',
+        ]);
+        $candidate = CandidateImageData::fromArray([
+            'source_page_url' => 'https://trusted.example/products/acme-black',
+            'image_url' => 'https://trusted.example/images/acme-black.jpg',
+            'title' => 'Acme black jacket',
+            'structured_data' => ['brand' => 'Acme', 'gtin13' => '8012345678901', 'color' => 'black'],
+            'quality_score' => 96,
+        ]);
+
+        $score = $this->score->handle($identity, $candidate, $this->trustedSource());
+
+        self::assertTrue($score->hasStrongMatch);
+        self::assertTrue($score->modelMatched);
+        self::assertContains('ean', $score->evidence['strong_matches']);
+        self::assertContains('structured_gtin', $score->evidence['matches']);
+        self::assertSame('candidate', $score->status);
+    }
+
+    public function test_structured_ean_mismatch_is_treated_as_wrong_product(): void
+    {
+        $identity = ProductIdentityData::fromArray([
+            'brand' => 'Acme',
+            'ean' => '8012345678901',
+            'model_code' => 'AB123',
+            'color_name' => 'black',
+        ]);
+        $candidate = CandidateImageData::fromArray([
+            'source_page_url' => 'https://trusted.example/products/ab123-black',
+            'image_url' => 'https://trusted.example/images/ab123-black.jpg',
+            'title' => 'Acme AB123 black jacket',
+            'structured_data' => ['brand' => 'Acme', 'mpn' => 'AB123', 'gtin13' => '9999999999999', 'color' => 'black'],
+            'quality_score' => 96,
+        ]);
+
+        $score = $this->score->handle($identity, $candidate, $this->trustedSource());
+
+        self::assertTrue($score->modelMismatch);
+        self::assertContains('structured_gtin_mismatch', $score->evidence['mismatches']);
+        self::assertContains('WRONG_PRODUCT', $score->issues);
+        self::assertSame('low_score_rejected', $score->status);
+    }
+
     public function test_untrusted_source_is_not_auto_published_even_with_exact_model_match(): void
     {
         $candidate = CandidateImageData::fromArray([

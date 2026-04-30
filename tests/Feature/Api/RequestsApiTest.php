@@ -62,6 +62,22 @@ final class RequestsApiTest extends ApiTestCase
         $this->assertSame('Updated Brand', FakeProductImageDiscoveryRequest::query()->firstOrFail()->brand);
     }
 
+    public function test_ingest_accepts_barcode_alias_and_persists_it_as_ean(): void
+    {
+        Bus::fake();
+        $this->authenticate(['write']);
+
+        $this->postJson('/api/product-image-discovery/requests', $this->requestPayload([
+            'ean' => null,
+            'barcode' => '80 50000 000012',
+        ]))->assertCreated();
+
+        $record = FakeProductImageDiscoveryRequest::query()->firstOrFail();
+
+        $this->assertSame('8050000000012', $record->ean);
+        $this->assertSame('80 50000 000012', $record->raw_payload['barcode'] ?? null);
+    }
+
     public function test_search_and_show_return_expected_data_with_read_ability(): void
     {
         $this->authenticate(['read']);
@@ -93,6 +109,12 @@ final class RequestsApiTest extends ApiTestCase
             ->assertOk()
             ->assertJsonPath('data.0.id', $record->getKey())
             ->assertJsonPath('data.0.status', 'manual_review');
+
+        $record->forceFill(['ean' => '8050000000012'])->save();
+
+        $this->getJson('/api/product-image-discovery/requests/search?barcode=8050000000012')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $record->getKey());
 
         $this->getJson('/api/product-image-discovery/requests/' . $record->getKey())
             ->assertOk()

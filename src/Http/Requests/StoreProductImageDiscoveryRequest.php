@@ -17,6 +17,11 @@ final class StoreProductImageDiscoveryRequest extends ProductImageDiscoveryFormR
             'supplier' => ['nullable', 'string', 'max:191'],
             'supplier_sku' => ['nullable', 'string', 'max:191'],
             'ean' => ['nullable', 'string', 'max:64'],
+            'barcode' => ['nullable', 'string', 'max:64'],
+            'bar_code' => ['nullable', 'string', 'max:64'],
+            'gtin' => ['nullable', 'string', 'max:64'],
+            'gtin13' => ['nullable', 'string', 'max:64'],
+            'gtin14' => ['nullable', 'string', 'max:64'],
             'name' => ['nullable', 'string', 'max:255'],
             'title' => ['nullable', 'string', 'max:255'],
             'model_code' => ['nullable', 'string', 'max:191'],
@@ -33,5 +38,35 @@ final class StoreProductImageDiscoveryRequest extends ProductImageDiscoveryFormR
             'attributes' => ['nullable', 'array'],
             'raw_payload' => ['nullable', 'array'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->filled('ean')) {
+            $this->merge(['ean' => $this->normalizeBarcode($this->input('ean'))]);
+        }
+
+        if (! $this->filled('ean')) {
+            foreach (['barcode', 'bar_code', 'gtin', 'gtin13', 'gtin14'] as $field) {
+                if (! $this->filled($field)) {
+                    continue;
+                }
+
+                $this->merge(['ean' => $this->normalizeBarcode($this->input($field))]);
+
+                break;
+            }
+        }
+    }
+
+    private function normalizeBarcode(mixed $value): ?string
+    {
+        if (! is_scalar($value)) {
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', (string) $value) ?? '';
+
+        return $digits === '' ? null : $digits;
     }
 }
