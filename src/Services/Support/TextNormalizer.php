@@ -20,7 +20,7 @@ final class TextNormalizer
             'yellow' => ['yellow', 'giallo', 'gialla', 'jaune', 'gelb'],
             'brown' => ['brown', 'marrone', 'cuoio', 'brun'],
             'grey' => ['grey', 'gray', 'grigio', 'grigia', 'gris'],
-            'beige' => ['beige', 'sabbia', 'sand', 'tan'],
+            'beige' => ['beige', 'sabbia', 'sand', 'tan', 'camel', 'cammello', 'biscuit', 'light brown'],
             'pink' => ['pink', 'rosa', 'rose'],
             'purple' => ['purple', 'viola', 'lilla', 'violet'],
             'orange' => ['orange', 'arancio', 'arancione'],

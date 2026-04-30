@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Padosoft\ProductImageDiscovery\Tests\Feature\Console;
 
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use Padosoft\ProductImageDiscovery\Models\ProductImageSearchProvider;
 use Padosoft\ProductImageDiscovery\Tests\TestCase;
 
@@ -62,6 +63,7 @@ final class DebugFlowCommandTest extends TestCase
 
         $requestPath = $dir . DIRECTORY_SEPARATOR . 'debug-flow-request.json';
         $reportPath = $dir . DIRECTORY_SEPARATOR . 'debug-flow-report.json';
+        Storage::disk('local')->put('product-image-discovery/1/stale.jpg', 'stale');
 
         File::put($requestPath, json_encode([
             'client_id' => 1,
@@ -83,6 +85,7 @@ final class DebugFlowCommandTest extends TestCase
             '--report' => $reportPath,
             '--no-download' => true,
             '--no-env-brave' => true,
+            '--fresh' => true,
         ])->assertExitCode(0);
 
         self::assertFileExists($reportPath);
@@ -96,7 +99,9 @@ final class DebugFlowCommandTest extends TestCase
         self::assertTrue($report['summary']['stop_on_first_good'] ?? false);
         self::assertTrue($report['summary']['stopped_early'] ?? false);
         self::assertSame(65, $report['summary']['good_score_threshold'] ?? null);
+        self::assertSame([1], $report['summary']['storage_cleaned_request_ids'] ?? null);
         self::assertSame('fake-debug', $report['search']['provider'] ?? null);
         self::assertSame('https://example.test/herno-pi002223d-cammello', $report['candidates'][0]['source_page_url'] ?? null);
+        self::assertFalse(Storage::disk('local')->exists('product-image-discovery/1/stale.jpg'));
     }
 }

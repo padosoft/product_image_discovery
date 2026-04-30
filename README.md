@@ -437,7 +437,7 @@ What you see on screen:
 
 - ASCII art header, so debug runs are easy to spot in terminal history.
 - Request ingest: JSON file path, `client_id`, `erp_model_color_id`, brand, model and color identity.
-- Search step: provider used, generated queries, query weights, result count and provider attempts.
+- Search step: provider used, generated queries, executed query attempts, query weights, result count and provider attempts.
 - Found sites and images: source domain, page URL, image URL, title and image dimensions for each provider result.
 - Extraction step: candidate ids and source pages retained from the search results.
 - Candidate plan: deterministic debug rank and the exact order in which candidates will be examined.
@@ -469,6 +469,7 @@ php artisan product-image-discovery:debug-flow examples/requests/herno-cappa-nyl
 - `--json`: prints only the JSON report and disables the live console trace.
 - `--no-download`: skips download and quality assessment.
 - `--download-all`: downloads and quality-assesses every verified candidate; by default only the best verified candidate is downloaded.
+- `--clean-storage`: deletes the `product-image-discovery/{request_id}` storage directory before downloading, useful when repeating debug runs.
 - `--stop-on-first-good`: stops verifying more candidates after a good verified candidate is found.
 - `--exhaustive`: verifies every candidate up to `--max-candidates`, ignoring the early-stop setting.
 - `--good-score=65`: overrides the score threshold used by early stop.
@@ -484,6 +485,8 @@ PRODUCT_IMAGE_DISCOVERY_DEBUG_GOOD_SCORE_THRESHOLD=65
 ```
 
 With early stop enabled, the command stops candidate verification when a verified candidate is good enough because it comes from an auto-publish/trusted source, the source domain contains the brand, or its final score reaches the configured threshold. Use `--exhaustive` when you intentionally want to inspect all candidates up to `--max-candidates`.
+
+`--fresh` also cleans the storage directory for the matching old request ids and the new debug request id. This matters especially when running from the package with Testbench: the database is often SQLite in-memory, so request ids can restart from `1` while physical files under `vendor/orchestra/testbench-core/laravel/storage/...` remain from older debug or live test runs.
 
 To inspect and download every verified candidate in a broad run, combine:
 
@@ -542,7 +545,9 @@ report="$(pwd)/storage/debug/herno-flow.json"
 php vendor/bin/testbench product-image-discovery:debug-flow "$request" --migrate --fresh --max-candidates=10 --report="$report"
 ```
 
-With `BRAVE_SEARCH_API_KEY` configured, the command auto-creates a `brave-live-debug` provider and shows the live Brave image results. With AI enabled and `PRODUCT_IMAGE_DISCOVERY_AI_ATTACH_REMOTE_IMAGE=true`, it also sends each verified candidate image URL to the configured vision model and prints the full AI verification result.
+With `BRAVE_SEARCH_API_KEY` configured, the command auto-creates a `brave-live-debug` provider and shows the live Brave image results. Search queries prefer product-code + color combinations before bare product-code searches, so fashion variants such as `PI002223D CAMMELLO` are tried before broader `PI002223D` searches. With AI enabled and `PRODUCT_IMAGE_DISCOVERY_AI_ATTACH_REMOTE_IMAGE=true`, it also sends each verified candidate image URL to the configured vision model and prints the full AI verification result.
+
+The AI verifier is instructed to inspect the actual attached image first. Numeric vendor color ids in URLs or DOM metadata are not treated as color names: if the image visibly looks camel/tan/beige/cammello, the model can mark the requested color as equivalent; if the image visibly shows a different product or color, for example white shoes, it should mark `match=false`, `variant_safe=false`, `color_match=false` and `product_type_match=false`.
 
 In the local Herno run, the trace found the official `us.herno.com` image, downloaded it under `product-image-discovery/{request_id}/{candidate_id}.jpg`, quality-checked it, printed the SHA-256 hash, and kept the request in `manual_review` because the source was not configured as auto-publishable. External results and AI wording can change, so treat the report as the source of truth for each run.
 

@@ -57,16 +57,24 @@ final class GenerateSearchQueriesAction
             $add($brand . ' ' . $this->quote($identity->ean), 'ean', 100);
         }
 
-        if ($identity->supplierSku !== null) {
-            $add($brand . ' ' . $this->quote($identity->supplierSku), 'supplier_sku', 95);
+        if ($identity->supplierSku !== null && $identity->colorCode !== null) {
+            $add($brand . ' ' . $this->quote($identity->supplierSku) . ' ' . $this->quote($identity->colorCode), 'supplier_sku_color_code', 99);
+        }
+
+        if ($identity->supplierSku !== null && $identity->colorName !== null) {
+            $add($brand . ' ' . $this->quote($identity->supplierSku) . ' ' . $this->quote($identity->colorName), 'supplier_sku_color_name', 98);
         }
 
         if ($identity->modelCode !== null && $identity->colorCode !== null) {
-            $add($brand . ' ' . $this->quote($identity->modelCode) . ' ' . $this->quote($identity->colorCode), 'model_code_color_code', 90);
+            $add($brand . ' ' . $this->quote($identity->modelCode) . ' ' . $this->quote($identity->colorCode), 'model_code_color_code', 97);
         }
 
         if ($identity->modelCode !== null && $identity->colorName !== null) {
-            $add($brand . ' ' . $this->quote($identity->modelCode) . ' ' . $this->quote($identity->colorName), 'model_code_color_name', 85);
+            $add($brand . ' ' . $this->quote($identity->modelCode) . ' ' . $this->quote($identity->colorName), 'model_code_color_name', 96);
+        }
+
+        if ($identity->supplierSku !== null) {
+            $add($brand . ' ' . $this->quote($identity->supplierSku), 'supplier_sku', 90);
         }
 
         if ($identity->hasStrongIdentifier() || $allowGenericWithoutStrongIdentifier) {
@@ -91,16 +99,28 @@ final class GenerateSearchQueriesAction
                     continue;
                 }
 
-                if ($identity->supplierSku !== null) {
-                    $add('site:' . $domain . ' ' . $this->quote($identity->supplierSku), 'site_supplier_sku', 98, 'image', $domain, ['source' => $source]);
+                if ($identity->ean !== null) {
+                    $add('site:' . $domain . ' ' . $this->quote($identity->ean), 'site_ean', 100, 'image', $domain, ['source' => $source]);
+                }
+
+                if ($identity->supplierSku !== null && $identity->colorCode !== null) {
+                    $add('site:' . $domain . ' ' . $this->quote($identity->supplierSku) . ' ' . $this->quote($identity->colorCode), 'site_supplier_sku_color_code', 99, 'image', $domain, ['source' => $source]);
+                }
+
+                if ($identity->supplierSku !== null && $identity->colorName !== null) {
+                    $add('site:' . $domain . ' ' . $this->quote($identity->supplierSku) . ' ' . $this->quote($identity->colorName), 'site_supplier_sku_color_name', 98, 'image', $domain, ['source' => $source]);
                 }
 
                 if ($identity->modelCode !== null && $identity->colorCode !== null) {
-                    $add('site:' . $domain . ' ' . $this->quote($identity->modelCode) . ' ' . $this->quote($identity->colorCode), 'site_model_code_color_code', 94, 'image', $domain, ['source' => $source]);
+                    $add('site:' . $domain . ' ' . $this->quote($identity->modelCode) . ' ' . $this->quote($identity->colorCode), 'site_model_code_color_code', 97, 'image', $domain, ['source' => $source]);
                 }
 
-                if ($identity->ean !== null) {
-                    $add('site:' . $domain . ' ' . $this->quote($identity->ean), 'site_ean', 99, 'image', $domain, ['source' => $source]);
+                if ($identity->modelCode !== null && $identity->colorName !== null) {
+                    $add('site:' . $domain . ' ' . $this->quote($identity->modelCode) . ' ' . $this->quote($identity->colorName), 'site_model_code_color_name', 96, 'image', $domain, ['source' => $source]);
+                }
+
+                if ($identity->supplierSku !== null) {
+                    $add('site:' . $domain . ' ' . $this->quote($identity->supplierSku), 'site_supplier_sku', 92, 'image', $domain, ['source' => $source]);
                 }
             }
         }

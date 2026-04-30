@@ -71,6 +71,9 @@
 - A Laravel package root does not have an `artisan` file. `php artisan ...` is for host Laravel apps; from the package repo use `vendor/bin/testbench ...`.
 - Live LLM vision can disagree conservatively on ERP color naming when the image URL uses a numeric vendor color code. Preserve the AI disagreement in the report and keep the result in manual review unless a trusted source/policy resolves the ambiguity.
 - Live image downloads can be blocked by Cloudflare/third-party anti-bot pages after search and verification succeed. Live E2E tests should try alternate verified candidates and skip cleanly only when all external downloads are blocked.
+- Testbench can reuse request ids across runs because the debug app often uses SQLite in-memory, while `vendor/orchestra/testbench-core/laravel/storage/...` persists. Debug runs must clean `product-image-discovery/{request_id}` storage when using `--fresh` or stale files from older live tests can be mistaken for newly downloaded candidates.
+- For fashion colors, `cammello/camel/tan/beige/biscuit/light brown` should be treated as the same visual color family. A page title containing both `marrone` and `cammello` must not become a hard `WRONG_COLOR` when the requested ERP color is `cammello`.
+- Vision AI should evaluate the attached image first for visible product type and visible color. Numeric vendor color codes in URLs/DOM are supporting metadata, not color names; high-confidence visible mismatches should become hard mismatch evidence, while low-confidence AI disagreement should not override deterministic brand/model/color matches.
 
 ## Future Session Rules
 

@@ -49,4 +49,27 @@ final class GenerateSearchQueriesActionTest extends TestCase
 
         self::assertSame([], $queries);
     }
+
+    public function test_it_prioritizes_color_aware_model_queries_before_bare_supplier_sku(): void
+    {
+        $identity = ProductIdentityData::fromArray([
+            'brand' => 'Herno',
+            'supplier_sku' => 'PI002223D',
+            'model_code' => 'PI002223D',
+            'color_code' => 'CAMMELLO',
+            'color_name' => 'Cammello',
+            'description' => 'Cappa In Nylon Ultralight Cammello',
+        ]);
+
+        $queries = (new GenerateSearchQueriesAction())->handle($identity, [], ['max_queries' => 4]);
+
+        self::assertNotSame([], $queries);
+        self::assertSame('"Herno" "PI002223D" "CAMMELLO"', $queries[0]->query);
+        self::assertSame('supplier_sku_color_code', $queries[0]->intent);
+        $bareSupplierIndex = array_search('supplier_sku', array_map(static fn ($query): string => $query->intent, $queries), true);
+
+        self::assertIsInt($bareSupplierIndex);
+        self::assertGreaterThan(0, $bareSupplierIndex);
+        self::assertSame('"Herno" "PI002223D"', $queries[$bareSupplierIndex]->query);
+    }
 }

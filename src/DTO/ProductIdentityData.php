@@ -38,6 +38,8 @@ final readonly class ProductIdentityData implements JsonSerializable
      */
     public static function fromArray(array $data): self
     {
+        $metadata = is_array($data['metadata'] ?? null) ? $data['metadata'] : [];
+
         return new self(
             clientId: $data['client_id'] ?? $data['clientId'] ?? null,
             erpModelId: TextNormalizer::nullableString($data['erp_model_id'] ?? $data['erpModelId'] ?? null),
@@ -54,7 +56,7 @@ final readonly class ProductIdentityData implements JsonSerializable
             season: TextNormalizer::nullableString($data['season'] ?? null),
             category: TextNormalizer::nullableString($data['category'] ?? null),
             material: TextNormalizer::nullableString($data['material'] ?? null),
-            description: TextNormalizer::nullableString($data['description'] ?? $data['name'] ?? $data['title'] ?? null),
+            description: TextNormalizer::nullableString($data['description'] ?? $data['name'] ?? $data['title'] ?? $metadata['description'] ?? $metadata['title'] ?? null),
             rawPayload: is_array($data['raw_payload'] ?? null) ? $data['raw_payload'] : $data,
         );
     }

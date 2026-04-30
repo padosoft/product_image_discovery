@@ -30,11 +30,12 @@ final class ScoreCandidateImageAction
 
         [$textualScore, $textEvidence, $strongMatches, $flags] = $this->scoreTextual($identity, $candidate, $corpus);
         [$structuredScore, $structuredEvidence, $structuredStrongMatches, $structuredFlags] = $this->scoreStructured($identity, $structured);
+        [$aiEvidence, $aiFlags] = $this->scoreAiVerification($candidate->aiAnalysis, $settings);
 
         $strongMatches = array_merge($strongMatches, $structuredStrongMatches);
-        $flags = array_merge($flags, array_filter($structuredFlags));
-        $evidence['matches'] = array_merge($textEvidence['matches'], $structuredEvidence['matches']);
-        $evidence['mismatches'] = array_merge($textEvidence['mismatches'], $structuredEvidence['mismatches']);
+        $flags = array_merge($flags, array_filter($structuredFlags), array_filter($aiFlags));
+        $evidence['matches'] = array_merge($textEvidence['matches'], $structuredEvidence['matches'], $aiEvidence['matches']);
+        $evidence['mismatches'] = array_merge($textEvidence['mismatches'], $structuredEvidence['mismatches'], $aiEvidence['mismatches']);
 
         $brandMatched = (bool) ($flags['brand_matched'] ?? false);
         $brandMismatch = (bool) ($flags['brand_mismatch'] ?? false);
@@ -279,10 +280,11 @@ final class ScoreCandidateImageAction
         }
 
         $expectedColor = $identity->normalizedColorName();
-        $actualColor = TextNormalizer::canonicalColor($this->structuredValue($structured, ['color', 'colour']));
+        $actualColorValue = $this->structuredValue($structured, ['color', 'colour']);
+        $actualColor = TextNormalizer::canonicalColor($actualColorValue);
 
         if ($expectedColor !== null && $actualColor !== null) {
-            if ($expectedColor === $actualColor) {
+            if ($expectedColor === $actualColor || in_array($expectedColor, TextNormalizer::mentionedColors((string) $actualColorValue), true)) {
                 $score += 15;
                 $matches[] = 'structured_color';
                 $flags['color_matched'] = true;
@@ -346,6 +348,22 @@ final class ScoreCandidateImageAction
             return $candidate->visualMatchScore;
         }
 
+        $verification = is_array($candidate->aiAnalysis['verification'] ?? null)
+            ? $candidate->aiAnalysis['verification']
+            : null;
+
+        if ($verification !== null
+            && ($verification['available'] ?? false) === true
+            && ($verification['status'] ?? null) === 'completed'
+            && isset($verification['confidence'])
+            && is_numeric($verification['confidence'])) {
+            if (($verification['match'] ?? false) !== true || ($verification['variant_safe'] ?? false) !== true) {
+                return 0;
+            }
+
+            return max(0, min(100, (int) $verification['confidence']));
+        }
+
         foreach (['match_score', 'score', 'confidence', 'vision_score'] as $key) {
             if (! isset($candidate->aiAnalysis[$key]) || ! is_numeric($candidate->aiAnalysis[$key])) {
                 continue;
@@ -357,5 +375,76 @@ final class ScoreCandidateImageAction
         }
 
         return 0;
+    }
+
+    /**
+     * @param array<string, mixed> $aiAnalysis
+     * @param array<string, mixed> $settings
+     * @return array{0:array{matches:list<string>,mismatches:list<string>},1:array<string, bool>}
+     */
+    private function scoreAiVerification(array $aiAnalysis, array $settings): array
+    {
+        $verification = is_array($aiAnalysis['verification'] ?? null) ? $aiAnalysis['verification'] : null;
+
+        if ($verification === null
+            || ($verification['available'] ?? false) !== true
+            || ($verification['status'] ?? null) !== 'completed') {
+            return [['matches' => [], 'mismatches' => []], []];
+        }
+
+        $confidence = max(0, min(100, (int) ($verification['confidence'] ?? 0)));
+        $threshold = max(0, min(100, (int) ($settings['ai_mismatch_confidence_threshold'] ?? 70)));
+        $matches = [];
+        $mismatches = [];
+        $flags = [];
+
+        if ($confidence < $threshold) {
+            return [['matches' => [], 'mismatches' => []], []];
+        }
+
+        if (($verification['brand_match'] ?? false) === true) {
+            $matches[] = 'ai_brand';
+            $flags['brand_matched'] = true;
+        } else {
+            $mismatches[] = 'ai_brand_mismatch';
+        }
+
+        if (($verification['model_match'] ?? false) === true) {
+            $matches[] = 'ai_model';
+            $flags['model_matched'] = true;
+        } else {
+            $mismatches[] = 'ai_model_mismatch';
+            $flags['model_mismatch'] = true;
+        }
+
+        if (($verification['product_type_match'] ?? false) === true) {
+            $matches[] = 'ai_product_type';
+        } else {
+            $mismatches[] = 'ai_product_type_mismatch';
+            $flags['model_mismatch'] = true;
+        }
+
+        if (($verification['color_match'] ?? false) === true) {
+            $matches[] = 'ai_color';
+            $flags['color_matched'] = true;
+        } else {
+            $mismatches[] = 'ai_color_mismatch';
+            $flags['color_mismatch'] = true;
+        }
+
+        if (($verification['variant_safe'] ?? false) === true && ($verification['match'] ?? false) === true) {
+            $matches[] = 'ai_visual_verification';
+        } else {
+            $mismatches[] = 'ai_variant_unsafe';
+            $flags['color_mismatch'] = true;
+        }
+
+        return [
+            [
+                'matches' => array_values(array_unique($matches)),
+                'mismatches' => array_values(array_unique($mismatches)),
+            ],
+            $flags,
+        ];
     }
 }

@@ -21,4 +21,10 @@ final class TextNormalizerTest extends TestCase
     {
         self::assertFalse(TextNormalizer::containsCodePrefix('New Balance 550123', '550'));
     }
+
+    public function test_it_treats_cammello_as_a_camel_beige_color_family(): void
+    {
+        self::assertSame('beige', TextNormalizer::canonicalColor('cammello'));
+        self::assertContains('beige', TextNormalizer::mentionedColors('marrone cammello nylon ultralight'));
+    }
 }

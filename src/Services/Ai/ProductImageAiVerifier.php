@@ -76,6 +76,13 @@ final class ProductImageAiVerifier
                 'variant_color_must_match' => true,
                 'brand_and_model_should_match' => true,
                 'do_not_invent_missing_identifiers' => true,
+                'inspect_attached_image_before_metadata' => true,
+                'attached_image_visual_color_overrides_url_or_dom_color_codes' => true,
+                'numeric_vendor_color_codes_are_not_color_names' => true,
+                'accept_visible_color_synonyms' => ['cammello', 'camel', 'tan', 'beige', 'biscuit', 'light brown'],
+                'if_visible_color_matches_requested_color_ignore_numeric_url_code' => true,
+                'if_metadata_and_image_disagree_image_wins' => true,
+                'notes_must_include_observed_visible_color_and_product_type' => true,
             ],
         ];
 

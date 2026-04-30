@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Padosoft\ProductImageDiscovery\Actions\ScoreCandidateImageAction;
 use Padosoft\ProductImageDiscovery\DTO\ProductIdentityData;
@@ -36,6 +37,7 @@ final class ProductImageDiscoveryDebugFlowCommand extends Command
         {--report= : Optional path where the full JSON report should be written}
         {--json : Print the full JSON report instead of formatted console output}
         {--fresh : Delete the existing request for client_id + erp_model_color_id before running}
+        {--clean-storage : Delete the request storage directory before downloading, useful for repeated debug/Testbench runs}
         {--migrate : Run package migrations before the flow, useful in local demo/Testbench environments}
         {--no-download : Skip download and quality assessment}
         {--download-all : Download and quality-assess every verified candidate instead of only the best verified candidate}
@@ -68,9 +70,7 @@ final class ProductImageDiscoveryDebugFlowCommand extends Command
                 $this->upsertEnvBraveProvider();
             }
 
-            if ((bool) $this->option('fresh')) {
-                $this->deleteExistingRequest($payload);
-            }
+            $freshStorageRequestIds = (bool) $this->option('fresh') ? $this->deleteExistingRequest($payload) : [];
 
             Bus::fake();
 
@@ -78,7 +78,7 @@ final class ProductImageDiscoveryDebugFlowCommand extends Command
                 $this->renderHeader();
             }
 
-            $report = $this->runPipeline($payload, $requestPath, $store, $searchManager, $logger);
+            $report = $this->runPipeline($payload, $requestPath, $store, $searchManager, $logger, $freshStorageRequestIds);
             $this->writeReport($report);
 
             if ((bool) $this->option('json')) {
@@ -115,6 +115,7 @@ final class ProductImageDiscoveryDebugFlowCommand extends Command
         PipelineStoreInterface $store,
         SearchProviderManager $searchManager,
         ProductImageEventLogger $logger,
+        array $freshStorageRequestIds = [],
     ): array {
         $startedAt = gmdate('c');
         $maxCandidates = max(1, (int) $this->option('max-candidates'));
@@ -126,6 +127,9 @@ final class ProductImageDiscoveryDebugFlowCommand extends Command
         $stopReason = null;
 
         $request = (new IngestProductImageDiscoveryJob($payload))->handle($store, $logger);
+        $storageCleanedRequestIds = $this->cleanStorageRequestIds(array_merge($freshStorageRequestIds, [
+            $request['id'] ?? null,
+        ]));
         $request = (new SearchProductImageJob($request['id']))->handle($store, $searchManager, $logger);
         $request = (new ExtractCandidateSourcesJob($request['id']))->handle($store, $logger);
         $identity = ProductIdentityData::fromArray(array_merge($request, [
@@ -143,6 +147,7 @@ final class ProductImageDiscoveryDebugFlowCommand extends Command
             ['ERP color id', $request['erp_model_color_id'] ?? '-'],
             ['Client id', $request['client_id'] ?? '-'],
             ['Request file', $requestPath],
+            ['Storage cleaned for ids', implode(', ', $storageCleanedRequestIds) ?: '-'],
         ]);
 
         $this->streamStage('2/6 Search providers');
@@ -262,6 +267,7 @@ final class ProductImageDiscoveryDebugFlowCommand extends Command
                 'candidate_count' => count($candidates),
                 'verified_match_count' => count($verifiedMatches),
                 'has_verified_match' => $verifiedMatches !== [],
+                'storage_cleaned_request_ids' => $storageCleanedRequestIds,
             ],
             'config' => [
                 'ai_enabled' => (bool) config('product-image-discovery.ai.enabled', false),
@@ -369,13 +375,52 @@ final class ProductImageDiscoveryDebugFlowCommand extends Command
 
     /**
      * @param array<string, mixed> $payload
+     * @return list<int|string>
      */
-    private function deleteExistingRequest(array $payload): void
+    private function deleteExistingRequest(array $payload): array
     {
-        ProductImageDiscoveryRequest::query()
+        $query = ProductImageDiscoveryRequest::query()
             ->where('client_id', $payload['client_id'])
-            ->where('erp_model_color_id', $payload['erp_model_color_id'])
-            ->delete();
+            ->where('erp_model_color_id', $payload['erp_model_color_id']);
+
+        $requestIds = $query->pluck('id')->all();
+        $query->delete();
+
+        return array_values(array_filter($requestIds, static fn (mixed $id): bool => $id !== null && $id !== ''));
+    }
+
+    /**
+     * @param array<int, mixed> $requestIds
+     * @return list<int|string>
+     */
+    private function cleanStorageRequestIds(array $requestIds): array
+    {
+        if (! (bool) $this->option('fresh') && ! (bool) $this->option('clean-storage')) {
+            return [];
+        }
+
+        $requestIds = array_values(array_unique(array_filter(
+            $requestIds,
+            static fn (mixed $id): bool => is_int($id) || (is_string($id) && trim($id) !== ''),
+        )));
+
+        if ($requestIds === []) {
+            return [];
+        }
+
+        $disk = (string) config('product-image-discovery.storage.disk', 'local');
+        $cleaned = [];
+
+        foreach ($requestIds as $requestId) {
+            try {
+                Storage::disk($disk)->deleteDirectory('product-image-discovery/' . $requestId);
+                $cleaned[] = $requestId;
+            } catch (Throwable $exception) {
+                $this->streamError('Storage cleanup failed for request #' . $requestId . ': ' . $exception->getMessage());
+            }
+        }
+
+        return $cleaned;
     }
 
     /**
@@ -768,6 +813,17 @@ final class ProductImageDiscoveryDebugFlowCommand extends Command
             ], array_filter($search['queries'], 'is_array')));
         }
 
+        if (($search['executions'] ?? []) !== []) {
+            $this->line('Executed query attempts');
+            $this->table(['#', 'Intent', 'Provider', 'Results', 'Query'], array_map(static fn (array $execution, int $index): array => [
+                $index + 1,
+                $execution['intent'] ?? '-',
+                $execution['provider'] ?? '-',
+                $execution['result_count'] ?? 0,
+                $execution['query'] ?? '-',
+            ], array_filter($search['executions'], 'is_array'), array_keys(array_filter($search['executions'], 'is_array'))));
+        }
+
         if (($search['results'] ?? []) !== []) {
             $this->line('Sites and images found');
             $this->table(['#', 'Domain', 'Size', 'Title', 'Page', 'Image'], array_map(static fn (array $result, int $index): array => [
@@ -945,11 +1001,25 @@ final class ProductImageDiscoveryDebugFlowCommand extends Command
     private function summarizeSearch(array $search): array
     {
         $execution = is_array($search['execution'] ?? null) ? $search['execution'] : [];
+        $executions = array_values(array_filter($search['executions'] ?? [], 'is_array'));
         $results = array_values(array_filter($execution['results'] ?? [], 'is_array'));
 
         return [
             'completed_at' => $search['completed_at'] ?? null,
             'queries' => $search['queries'] ?? [],
+            'executions' => array_map(static function (array $entry): array {
+                $searchQuery = is_array($entry['search_query'] ?? null) ? $entry['search_query'] : [];
+                $execution = is_array($entry['execution'] ?? null) ? $entry['execution'] : [];
+                $results = array_values(array_filter($execution['results'] ?? [], 'is_array'));
+
+                return [
+                    'intent' => $searchQuery['intent'] ?? null,
+                    'weight' => $searchQuery['weight'] ?? null,
+                    'query' => $searchQuery['query'] ?? null,
+                    'provider' => $execution['provider']['code'] ?? null,
+                    'result_count' => count($results),
+                ];
+            }, $executions),
             'provider' => $execution['provider']['code'] ?? null,
             'attempts' => $execution['attempts'] ?? [],
             'result_count' => count($results),

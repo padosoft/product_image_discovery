@@ -99,6 +99,24 @@ Implementare il modulo Product Image Discovery & Verification come package Larav
 - Added console screenshots for the debug command under `resources/artisan-command-01.png` and `resources/artisan-command-02.png`.
 - Composer validate strict: PASS.
 - PHPUnit Unit/Feature/E2E: PASS, `60 tests`, `276 assertions`, `1 skipped`.
+- Investigated Herno debug false positives:
+  - White Nike shoe files found under Testbench storage were stale files from previous request id `1` runs, not images returned by the current Herno Brave query.
+  - `product-image-discovery:debug-flow --fresh` now cleans old and new request storage directories; `--clean-storage` is also available for repeated debug runs.
+  - Search query generation now prioritizes color-aware supplier/model queries such as `"Herno" "PI002223D" "CAMMELLO"` before bare `"Herno" "PI002223D"`.
+  - The debug report now prints executed query attempts, not only the generated query list.
+  - AI verification now uses a visual-first prompt for actual product type/color and treats numeric vendor color ids as metadata, not color names.
+  - High-confidence AI visible mismatches are now scoring mismatches; low-confidence AI disagreements no longer override deterministic exact matches.
+  - `cammello/camel/tan/beige/biscuit/light brown` are normalized as one color family.
+- Verified live Herno after the fixes:
+  - Executed query: `"Herno" "PI002223D" "CAMMELLO"`.
+  - Brave returned 10 results from `mariodannashop.it` and `carmenboutique.it`.
+  - Candidate `1` from `mariodannashop.it` passed verification and quality.
+  - Final score: `99`; quality score: `75`; status: `quality_passed`.
+  - AI result: `match=true`, `color_match=true`, `product_type_match=true`, `confidence=90`.
+  - Stored image: `product-image-discovery/1/1.JPG`, physically under Testbench storage.
+  - Storage folder after the run contained only `1.JPG`, confirming stale files were removed.
+- Composer validate strict: PASS.
+- PHPUnit Unit/Feature/E2E: PASS, `66 tests`, `300 assertions`, `1 skipped`.
 
 ### Live Herno Debug Result
 

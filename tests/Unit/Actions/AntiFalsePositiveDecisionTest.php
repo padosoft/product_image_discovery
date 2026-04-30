@@ -88,6 +88,103 @@ final class AntiFalsePositiveDecisionTest extends TestCase
         self::assertSame('missing_strong_identifier_match', $decision['reason']);
     }
 
+    public function test_high_confidence_ai_visual_mismatch_rejects_wrong_visible_product(): void
+    {
+        $candidate = CandidateImageData::fromArray([
+            'source_page_url' => 'https://trusted.example/products/ab123-black',
+            'image_url' => 'https://trusted.example/images/white-shoes.jpg',
+            'title' => 'Acme AB123 black jacket',
+            'structured_data' => ['brand' => 'Acme', 'mpn' => 'AB123', 'color' => 'black'],
+            'quality_score' => 96,
+            'ai_analysis' => [
+                'verification' => [
+                    'enabled' => true,
+                    'available' => true,
+                    'status' => 'completed',
+                    'match' => false,
+                    'variant_safe' => false,
+                    'confidence' => 94,
+                    'brand_match' => false,
+                    'model_match' => false,
+                    'color_match' => false,
+                    'product_type_match' => false,
+                    'image_quality_ok' => true,
+                    'rejection_reason' => 'Image visibly shows white shoes, not a black jacket.',
+                    'notes' => 'Observed visible product type: shoes. Observed visible color: white.',
+                ],
+                'match_score' => 94,
+            ],
+        ]);
+
+        $score = $this->score->handle($this->identity, $candidate, $this->trustedSource());
+
+        self::assertTrue($score->modelMismatch);
+        self::assertTrue($score->colorMismatch);
+        self::assertFalse($score->brandMismatch);
+        self::assertContains('ai_product_type_mismatch', $score->evidence['mismatches']);
+        self::assertContains('WRONG_PRODUCT', $score->issues);
+        self::assertSame(0, $score->visualMatchScore);
+        self::assertSame('low_score_rejected', $score->status);
+    }
+
+    public function test_low_confidence_ai_color_disagreement_does_not_override_deterministic_match(): void
+    {
+        $candidate = CandidateImageData::fromArray([
+            'source_page_url' => 'https://trusted.example/products/ab123-black',
+            'image_url' => 'https://trusted.example/images/ab123-black.jpg',
+            'title' => 'Acme AB123 black jacket',
+            'structured_data' => ['brand' => 'Acme', 'mpn' => 'AB123', 'color' => 'black'],
+            'quality_score' => 96,
+            'ai_analysis' => [
+                'verification' => [
+                    'enabled' => true,
+                    'available' => true,
+                    'status' => 'completed',
+                    'match' => false,
+                    'variant_safe' => false,
+                    'confidence' => 25,
+                    'brand_match' => true,
+                    'model_match' => true,
+                    'color_match' => false,
+                    'product_type_match' => true,
+                    'image_quality_ok' => true,
+                    'rejection_reason' => 'Low-confidence color disagreement.',
+                    'notes' => 'Observed visible product type: jacket. Observed visible color: black.',
+                ],
+                'match_score' => 25,
+            ],
+        ]);
+
+        $score = $this->score->handle($this->identity, $candidate, $this->trustedSource());
+
+        self::assertFalse($score->colorMismatch);
+        self::assertFalse($score->modelMismatch);
+        self::assertSame('candidate', $score->status);
+    }
+
+    public function test_structured_color_with_brown_and_camel_terms_matches_cammello(): void
+    {
+        $identity = ProductIdentityData::fromArray([
+            'brand' => 'Herno',
+            'model_code' => 'PI002223D',
+            'color_name' => 'Cammello',
+            'supplier_sku' => 'PI002223D',
+        ]);
+        $candidate = CandidateImageData::fromArray([
+            'source_page_url' => 'https://trusted.example/products/pi002223d-cammello',
+            'image_url' => 'https://trusted.example/images/pi002223d-cammello.jpg',
+            'title' => 'Herno PI002223D Cappa In Marrone Cammello',
+            'structured_data' => ['brand' => 'Herno', 'mpn' => 'PI002223D', 'color' => 'Marrone Cammello'],
+            'quality_score' => 96,
+        ]);
+
+        $score = $this->score->handle($identity, $candidate, $this->trustedSource());
+
+        self::assertTrue($score->colorMatched);
+        self::assertFalse($score->colorMismatch);
+        self::assertContains('structured_color', $score->evidence['matches']);
+    }
+
     public function test_untrusted_source_is_not_auto_published_even_with_exact_model_match(): void
     {
         $candidate = CandidateImageData::fromArray([

@@ -51,7 +51,9 @@ final class ProductImageAiVerifierTest extends TestCase
         ProductImageCandidateVerifierAgent::assertPrompted(
             static fn (object $prompt): bool => str_contains($prompt->prompt, 'Air Force 1 07')
                 && str_contains($prompt->prompt, 'candidate_image')
-                && str_contains($prompt->prompt, 'wrong_product_is_worse_than_no_image'),
+                && str_contains($prompt->prompt, 'wrong_product_is_worse_than_no_image')
+                && str_contains($prompt->prompt, 'inspect_attached_image_before_metadata')
+                && str_contains($prompt->prompt, 'accept_visible_color_synonyms'),
         );
     }
 

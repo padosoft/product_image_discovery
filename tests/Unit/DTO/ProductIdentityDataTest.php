@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Padosoft\ProductImageDiscovery\Actions\NormalizeProductIdentityAction;
+use Padosoft\ProductImageDiscovery\DTO\ProductIdentityData;
 use PHPUnit\Framework\TestCase;
 
 require_once dirname(__DIR__, 3) . '/src/Services/Support/TextNormalizer.php';
@@ -32,5 +33,18 @@ final class ProductIdentityDataTest extends TestCase
         self::assertSame('black', $identity->normalizedColorName());
         self::assertTrue($identity->hasStrongIdentifier());
         self::assertArrayNotHasKey('erp_model_color_size_id', $identity->toSearchIntent());
+    }
+
+    public function test_it_uses_metadata_description_when_top_level_description_is_missing(): void
+    {
+        $identity = ProductIdentityData::fromArray([
+            'brand' => 'Herno',
+            'model_code' => 'PI002223D',
+            'metadata' => [
+                'description' => 'Cappa In Nylon Ultralight Cammello',
+            ],
+        ]);
+
+        self::assertSame('Cappa In Nylon Ultralight Cammello', $identity->description);
     }
 }
