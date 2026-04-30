@@ -6,6 +6,8 @@
 [![License](https://img.shields.io/packagist/l/padosoft/product-image-discovery.svg?style=flat-square)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-PHPUnit%20%2B%20Node-brightgreen.svg?style=flat-square)](#testing)
 
+![Product Image Discovery banner](resources/banner.png)
+
 Find the right product image, not just any image.
 
 `padosoft/product-image-discovery` is a Laravel package for discovering, verifying, scoring and preparing product images from supplier data, search providers and trusted sources. It is built for catalog teams, ERPs, PIMs and marketplaces where the expensive mistake is not "we found no image"; the expensive mistake is publishing the wrong image for a product-color variant.
