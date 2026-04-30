@@ -546,6 +546,13 @@ With `BRAVE_SEARCH_API_KEY` configured, the command auto-creates a `brave-live-d
 
 In the local Herno run, the trace found the official `us.herno.com` image, downloaded it under `product-image-discovery/{request_id}/{candidate_id}.jpg`, quality-checked it, printed the SHA-256 hash, and kept the request in `manual_review` because the source was not configured as auto-publishable. External results and AI wording can change, so treat the report as the source of truth for each run.
 
+Downloaded image paths:
+
+- The command prints the logical path stored on the configured Laravel disk, for example `product-image-discovery/1/4.jpg`.
+- In a host Laravel app with `PRODUCT_IMAGE_DISCOVERY_STORAGE_DISK=local`, that file is physically under the app storage directory, for example `storage/app/private/product-image-discovery/1/4.jpg`.
+- When running from this package with Testbench, the Laravel app is Testbench's skeleton app, so the physical file is under `vendor/orchestra/testbench-core/laravel/storage/app/private/product-image-discovery/1/4.jpg`.
+- If you change `PRODUCT_IMAGE_DISCOVERY_STORAGE_DISK`, inspect the root configured for that disk in the host app's `config/filesystems.php`.
+
 Console screenshots:
 
 ![Debug flow command ingest and search trace](resources/artisan-command-01.png)
