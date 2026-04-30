@@ -14,9 +14,15 @@ abstract class TestCase extends OrchestraTestCase
      */
     protected function getPackageProviders($app): array
     {
-        return [
+        $providers = [
             ProductImageDiscoveryServiceProvider::class,
         ];
+
+        if (class_exists(\Laravel\Ai\AiServiceProvider::class)) {
+            $providers[] = \Laravel\Ai\AiServiceProvider::class;
+        }
+
+        return $providers;
     }
 
     protected function defineEnvironment($app): void

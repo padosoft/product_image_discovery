@@ -64,20 +64,23 @@ return [
     'ai' => [
         'enabled' => env('PRODUCT_IMAGE_DISCOVERY_AI_ENABLED', false),
         'provider' => env('PRODUCT_IMAGE_DISCOVERY_AI_PROVIDER', 'anthropic'),
+        'timeout' => (int) env('PRODUCT_IMAGE_DISCOVERY_AI_TIMEOUT', 45),
+        'fail_silently' => env('PRODUCT_IMAGE_DISCOVERY_AI_FAIL_SILENTLY', true),
+        'attach_remote_image' => env('PRODUCT_IMAGE_DISCOVERY_AI_ATTACH_REMOTE_IMAGE', false),
         'vision_model' => env('PRODUCT_IMAGE_DISCOVERY_AI_VISION_MODEL'),
         'description_model' => env('PRODUCT_IMAGE_DISCOVERY_AI_DESCRIPTION_MODEL'),
         'providers' => [
             'openai' => [
                 'api_key' => env('OPENAI_API_KEY'),
-                'base_url' => env('OPENAI_BASE_URL'),
+                'base_url' => env('OPENAI_URL', env('OPENAI_BASE_URL')),
             ],
             'anthropic' => [
                 'api_key' => env('ANTHROPIC_API_KEY'),
-                'base_url' => env('ANTHROPIC_BASE_URL'),
+                'base_url' => env('ANTHROPIC_URL', env('ANTHROPIC_BASE_URL')),
             ],
             'openrouter' => [
                 'api_key' => env('OPENROUTER_API_KEY'),
-                'base_url' => env('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'),
+                'base_url' => env('OPENROUTER_URL', env('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1')),
             ],
         ],
     ],

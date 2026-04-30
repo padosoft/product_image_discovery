@@ -56,6 +56,9 @@
 - Real fashion product names often use multi-word model names rather than compact model codes. Matching must support phrase-based model matches while preserving anti-false-positive checks for similar code mismatches.
 - Add regression tests at the layer where a bug appears. The enum issue needed an Eloquent feature test, not only a pure unit test.
 - Brave live testing now covers both direct provider execution and DB-configured `SearchProviderManager` execution. Full live testing covers search, extraction, verification, download and quality assessment.
+- Laravel AI SDK v0.6.5 supports `Lab::Anthropic`, `Lab::OpenAI` and `Lab::OpenRouter`. Use the SDK's env names (`ANTHROPIC_URL`, `OPENAI_URL`, `OPENROUTER_URL`) rather than package-specific `*_BASE_URL` names.
+- Keep AI verification optional. It should enrich `ai_analysis` and visual confidence, but deterministic checks remain the safety gate.
+- Remote image attachments are provider/model dependent. Keep `PRODUCT_IMAGE_DISCOVERY_AI_ATTACH_REMOTE_IMAGE=false` by default and make live attachment tests opt-in.
 
 ## Future Session Rules
 

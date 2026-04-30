@@ -18,6 +18,7 @@ use Padosoft\ProductImageDiscovery\Enums\ProductImageDiscoveryRejectionReason;
 use Padosoft\ProductImageDiscovery\Jobs\Concerns\DispatchesPipelineJobs;
 use Padosoft\ProductImageDiscovery\Jobs\Concerns\ResolvesQueueName;
 use Padosoft\ProductImageDiscovery\Jobs\Contracts\PipelineStoreInterface;
+use Padosoft\ProductImageDiscovery\Services\Ai\ProductImageAiVerifier;
 use Padosoft\ProductImageDiscovery\Services\Logging\ProductImageEventLogger;
 
 final class VerifyCandidateImageJob implements ShouldQueue
@@ -40,6 +41,7 @@ final class VerifyCandidateImageJob implements ShouldQueue
         PipelineStoreInterface $store,
         ProductImageEventLogger $logger,
         ?ScoreCandidateImageAction $scorer = null,
+        ?ProductImageAiVerifier $aiVerifier = null,
     ): array
     {
         $request = $store->getRequest($this->requestId);
@@ -62,11 +64,39 @@ final class VerifyCandidateImageJob implements ShouldQueue
             'status' => ProductImageDiscoveryRequestStatus::Verifying->value,
         ]);
 
+        $aiAnalysis = $candidate['ai_analysis'] ?? [];
+
+        if (! is_array($aiAnalysis)) {
+            $aiAnalysis = [];
+        }
+
+        $aiVerification = null;
+        $aiVerifier ??= new ProductImageAiVerifier();
+
+        if ($aiVerifier->isEnabled()) {
+            $aiVerification = $aiVerifier->verify(
+                ProductIdentityData::fromArray(array_merge($request, [
+                    'raw_payload' => $request['raw_payload'] ?? $request,
+                ])),
+                CandidateImageData::fromArray($candidate),
+            );
+            $aiAnalysis['verification'] = $aiVerification->toArray();
+
+            if ($aiVerification->available) {
+                $aiAnalysis['match_score'] = $aiVerification->confidence;
+                $aiAnalysis['variant_safe'] = $aiVerification->variantSafe;
+            }
+        }
+
+        $candidateForScoring = array_merge($candidate, [
+            'ai_analysis' => $aiAnalysis,
+        ]);
+
         $score = ($scorer ?? new ScoreCandidateImageAction())->handle(
             ProductIdentityData::fromArray(array_merge($request, [
                 'raw_payload' => $request['raw_payload'] ?? $request,
             ])),
-            CandidateImageData::fromArray($candidate),
+            CandidateImageData::fromArray($candidateForScoring),
         );
 
         $candidateStatus = match ($score->status) {
@@ -91,7 +121,7 @@ final class VerifyCandidateImageJob implements ShouldQueue
             'final_score' => $score->finalScore,
             'rejection_reason' => $score->rejectionReason,
             'evidence' => $score->evidence,
-            'ai_analysis' => array_merge($candidate['ai_analysis'] ?? [], [
+            'ai_analysis' => array_merge($aiAnalysis, [
                 'issues' => $score->issues,
                 'has_strong_match' => $score->hasStrongMatch,
             ]),

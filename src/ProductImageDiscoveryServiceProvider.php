@@ -6,6 +6,7 @@ namespace Padosoft\ProductImageDiscovery;
 
 use Illuminate\Support\ServiceProvider;
 use Padosoft\ProductImageDiscovery\Jobs\Contracts\PipelineStoreInterface;
+use Padosoft\ProductImageDiscovery\Services\Ai\ProductImageAiVerifier;
 use Padosoft\ProductImageDiscovery\Services\Logging\AuditEventStoreInterface;
 use Padosoft\ProductImageDiscovery\Services\Logging\DatabaseAuditEventStore;
 use Padosoft\ProductImageDiscovery\Services\Logging\ProductImageEventLogger;
@@ -26,6 +27,7 @@ final class ProductImageDiscoveryServiceProvider extends ServiceProvider
         $this->app->bind(PipelineStoreInterface::class, EloquentPipelineStore::class);
         $this->app->bind(SearchProviderConfigRepositoryInterface::class, DatabaseSearchProviderConfigRepository::class);
         $this->app->bind(AuditEventStoreInterface::class, DatabaseAuditEventStore::class);
+        $this->app->singleton(ProductImageAiVerifier::class);
 
         $this->app->singleton(ProductImageEventLogger::class, function ($app): ProductImageEventLogger {
             return new ProductImageEventLogger($app->make(AuditEventStoreInterface::class));

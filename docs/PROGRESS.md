@@ -35,7 +35,9 @@ Implementare il modulo Product Image Discovery & Verification come package Larav
 - Fixed enum persistence bug discovered by live pipeline: manual-review decision reasons must not be written into the request `rejection_reason` enum column.
 - Added model-phrase matching so real catalog names such as `Air Force 1 07` can count as strong deterministic matches.
 - Added request JSON examples under `examples/requests/` and removed source/product URLs from ERP request payload examples.
-- Prepared env/config keys for future OpenAI, Anthropic and OpenRouter AI integration without making AI a runtime dependency yet.
+- Installed Laravel AI SDK and added optional AI verification for candidate images.
+- Added `ProductImageCandidateVerifierAgent`, `ProductImageAiVerifier`, AI verification DTO, fake tests, job integration and live AI verifier test skipped unless an AI key is provided.
+- Supported AI providers in package config/env: OpenAI, Anthropic and OpenRouter.
 
 ### Fixes Made During Integration
 
@@ -56,8 +58,8 @@ Implementare il modulo Product Image Discovery & Verification come package Larav
 - Composer validate strict: PASS.
 - PHPUnit aggregate:
   - Command: `& 'C:\Users\lopad\.config\herd\bin\php84\php.exe' vendor\bin\phpunit --testsuite Unit,Feature,E2E`
-  - Result: PASS, `48 tests`, `213 assertions`, `1 skipped`.
-  - Skip reason: live sidecar contract test is opt-in and requires `SIDECAR_E2E_URL`.
+  - Result after Brave + AI work: PASS, `57 tests`, `253 assertions`, `2 skipped`.
+  - Skip reasons: live sidecar contract requires `SIDECAR_E2E_URL`; live AI verifier requires `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, or `OPENAI_API_KEY`.
 - Sidecar Node tests:
   - Command: `npm test` in `sidecar`
   - Result: PASS, `7/7`.
@@ -65,6 +67,6 @@ Implementare il modulo Product Image Discovery & Verification come package Larav
 ### Remaining Optional Work
 
 - Add real external providers beyond Brave (`serpapi`, `google_custom_search`) when API credentials and contracts are decided.
-- Add an opt-in live LLM/vision test profile if real provider keys are supplied in `.env.testing`.
+- Run the opt-in live AI verifier test when `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, or `OPENAI_API_KEY` is provided.
 - Add a first-party Laravel app demo or example screenshots after the package API stabilizes.
 - Add CI workflows for PHP, Node sidecar, static analysis and coverage.

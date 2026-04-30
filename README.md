@@ -639,22 +639,45 @@ The sidecar uses Playwright when available and falls back to static HTTP+HTML ex
 
 ## AI And Vision
 
-The package is designed to support AI-assisted verification, enhancement and description generation, but the core pipeline does not require an LLM. Keep AI features behind configuration flags and run live provider tests only when credentials are explicitly available.
+The package includes an optional Laravel AI SDK integration for AI-assisted candidate verification. The core pipeline does not require an LLM: deterministic source/text/quality checks still run first, and AI output is stored as supporting evidence in `ai_analysis`.
 
 This keeps local development, CI and production ingestion stable even when a model provider is unavailable.
 
-The config is already prepared for the providers most teams ask for first:
+The config supports OpenAI, Anthropic and OpenRouter:
 
 ```env
 PRODUCT_IMAGE_DISCOVERY_AI_ENABLED=false
 PRODUCT_IMAGE_DISCOVERY_AI_PROVIDER=anthropic
+PRODUCT_IMAGE_DISCOVERY_AI_TIMEOUT=45
+PRODUCT_IMAGE_DISCOVERY_AI_FAIL_SILENTLY=true
+PRODUCT_IMAGE_DISCOVERY_AI_ATTACH_REMOTE_IMAGE=false
 OPENAI_API_KEY=
+OPENAI_URL=https://api.openai.com/v1
 ANTHROPIC_API_KEY=
+ANTHROPIC_URL=https://api.anthropic.com/v1
 OPENROUTER_API_KEY=
-OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+OPENROUTER_URL=https://openrouter.ai/api/v1
 ```
 
-At this stage the AI keys are reserved for the optional AI pipeline. The deterministic Brave/search/verification/download/quality flow works without them.
+To enable AI verification:
+
+```env
+PRODUCT_IMAGE_DISCOVERY_AI_ENABLED=true
+PRODUCT_IMAGE_DISCOVERY_AI_PROVIDER=anthropic
+ANTHROPIC_API_KEY=your-key
+```
+
+For OpenRouter:
+
+```env
+PRODUCT_IMAGE_DISCOVERY_AI_ENABLED=true
+PRODUCT_IMAGE_DISCOVERY_AI_PROVIDER=openrouter
+OPENROUTER_API_KEY=your-key
+OPENROUTER_URL=https://openrouter.ai/api/v1
+PRODUCT_IMAGE_DISCOVERY_AI_VISION_MODEL=anthropic/claude-haiku-4.5
+```
+
+By default, remote image attachments are disabled and the verifier sends product/candidate metadata only. Set `PRODUCT_IMAGE_DISCOVERY_AI_ATTACH_REMOTE_IMAGE=true` when you want the selected provider/model to inspect the candidate image URL directly. Keep this opt-in because not every provider/model supports remote image attachments.
 
 ## Testing
 
