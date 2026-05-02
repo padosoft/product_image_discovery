@@ -68,13 +68,17 @@ return [
 
     'ai' => [
         'enabled' => env('PRODUCT_IMAGE_DISCOVERY_AI_ENABLED', false),
-        'provider' => env('PRODUCT_IMAGE_DISCOVERY_AI_PROVIDER', 'anthropic'),
+        'provider' => env('PRODUCT_IMAGE_DISCOVERY_AI_PROVIDER', 'regolo'),
         'timeout' => (int) env('PRODUCT_IMAGE_DISCOVERY_AI_TIMEOUT', 45),
         'fail_silently' => env('PRODUCT_IMAGE_DISCOVERY_AI_FAIL_SILENTLY', true),
         'attach_remote_image' => env('PRODUCT_IMAGE_DISCOVERY_AI_ATTACH_REMOTE_IMAGE', false),
         'vision_model' => env('PRODUCT_IMAGE_DISCOVERY_AI_VISION_MODEL'),
         'description_model' => env('PRODUCT_IMAGE_DISCOVERY_AI_DESCRIPTION_MODEL'),
         'providers' => [
+            'regolo' => [
+                'api_key' => env('REGOLO_API_KEY'),
+                'base_url' => env('REGOLO_URL', env('REGOLO_BASE_URL', 'https://api.regolo.ai/v1')),
+            ],
             'openai' => [
                 'api_key' => env('OPENAI_API_KEY'),
                 'base_url' => env('OPENAI_URL', env('OPENAI_BASE_URL')),

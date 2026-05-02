@@ -857,16 +857,19 @@ The package includes an optional Laravel AI SDK integration for AI-assisted cand
 
 This keeps local development, CI and production ingestion stable even when a model provider is unavailable.
 
-The config supports OpenAI, Anthropic and OpenRouter:
+The config defaults to Regolo through [`padosoft/laravel-ai-regolo`](https://github.com/padosoft/laravel-ai-regolo), while still supporting OpenAI, Anthropic and OpenRouter as alternate Laravel AI providers. AI verification is disabled by default, so the core pipeline remains deterministic and offline-friendly until you opt in with credentials.
 
 ```env
 PRODUCT_IMAGE_DISCOVERY_AI_ENABLED=false
-PRODUCT_IMAGE_DISCOVERY_AI_PROVIDER=anthropic
+PRODUCT_IMAGE_DISCOVERY_AI_PROVIDER=regolo
 PRODUCT_IMAGE_DISCOVERY_AI_TIMEOUT=45
 PRODUCT_IMAGE_DISCOVERY_AI_FAIL_SILENTLY=true
 PRODUCT_IMAGE_DISCOVERY_AI_ATTACH_REMOTE_IMAGE=false
-PRODUCT_IMAGE_DISCOVERY_AI_VISION_MODEL=claude-sonnet-4-5-20250929
-PRODUCT_IMAGE_DISCOVERY_AI_DESCRIPTION_MODEL=claude-haiku-4-5-20251001
+PRODUCT_IMAGE_DISCOVERY_AI_VISION_MODEL=
+PRODUCT_IMAGE_DISCOVERY_AI_DESCRIPTION_MODEL=Llama-3.3-70B-Instruct
+REGOLO_API_KEY=
+REGOLO_URL=https://api.regolo.ai/v1
+REGOLO_BASE_URL=
 OPENAI_API_KEY=
 OPENAI_URL=https://api.openai.com/v1
 OPENAI_BASE_URL=
@@ -882,8 +885,20 @@ To enable AI verification:
 
 ```env
 PRODUCT_IMAGE_DISCOVERY_AI_ENABLED=true
+PRODUCT_IMAGE_DISCOVERY_AI_PROVIDER=regolo
+REGOLO_API_KEY=your-key
+REGOLO_URL=https://api.regolo.ai/v1
+PRODUCT_IMAGE_DISCOVERY_AI_DESCRIPTION_MODEL=Llama-3.3-70B-Instruct
+```
+
+For Anthropic:
+
+```env
+PRODUCT_IMAGE_DISCOVERY_AI_ENABLED=true
 PRODUCT_IMAGE_DISCOVERY_AI_PROVIDER=anthropic
 ANTHROPIC_API_KEY=your-key
+PRODUCT_IMAGE_DISCOVERY_AI_VISION_MODEL=claude-sonnet-4-5-20250929
+PRODUCT_IMAGE_DISCOVERY_AI_DESCRIPTION_MODEL=claude-haiku-4-5-20251001
 ```
 
 For OpenRouter:
@@ -898,7 +913,7 @@ PRODUCT_IMAGE_DISCOVERY_AI_VISION_MODEL=your-openrouter-vision-model-id
 
 By default, remote image attachments are disabled and the verifier sends product/candidate metadata only. Set `PRODUCT_IMAGE_DISCOVERY_AI_ATTACH_REMOTE_IMAGE=true` when you want the selected provider/model to inspect the candidate image URL directly. Keep this opt-in because not every provider/model supports remote image attachments.
 
-For Anthropic, `PRODUCT_IMAGE_DISCOVERY_AI_VISION_MODEL=claude-sonnet-4-5-20250929` is a strong default for visual/product verification, while `PRODUCT_IMAGE_DISCOVERY_AI_DESCRIPTION_MODEL=claude-haiku-4-5-20251001` is a lower-cost default for description-style support tasks. If you switch to OpenAI or OpenRouter, set model names supported by that provider.
+Regolo is the package default because it gives Laravel applications an Italian/EU sovereign AI path through the same `laravel/ai` API. If you switch to Anthropic, OpenAI or OpenRouter, set model names supported by that provider.
 
 ## Testing
 
@@ -935,7 +950,7 @@ In a fresh offline environment, live sidecar/search/AI checks are skipped cleanl
 
 The skipped test is the live sidecar contract. Set `SIDECAR_E2E_URL` to test against a real running sidecar. Live search and AI checks require their provider credentials.
 
-Run the live AI verifier explicitly when you have a real Anthropic, OpenRouter or OpenAI key in `.env`:
+Run the live AI verifier explicitly when you have a real Regolo, Anthropic, OpenRouter or OpenAI key in `.env`:
 
 ```powershell
 & 'C:\Users\lopad\.config\herd\bin\php84\php.exe' vendor\bin\phpunit --testsuite E2E --filter LiveProductImageAiVerifierTest

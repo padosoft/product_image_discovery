@@ -136,6 +136,17 @@ Implementare il modulo Product Image Discovery & Verification come package Larav
   - Final score: `99`; quality score: `100`.
   - AI: `match=true`, `color_match=true`, `product_type_match=true`, `confidence=90`.
 
+## Session 2026-05-02
+
+### Completed
+
+- Made Regolo explicit as the default optional AI provider:
+  - added `padosoft/laravel-ai-regolo` as a package dependency
+  - changed the package AI provider fallback and `.env.example` from `anthropic` to `regolo`
+  - added `REGOLO_API_KEY`, `REGOLO_URL` and `REGOLO_BASE_URL` configuration
+  - kept OpenAI, Anthropic and OpenRouter documented as alternate providers
+  - updated AI verifier unit/feature/live-test defaults to include Regolo first
+
 ### Live Herno Debug Result
 
 - Command wrote `storage/debug/herno-flow.json`.

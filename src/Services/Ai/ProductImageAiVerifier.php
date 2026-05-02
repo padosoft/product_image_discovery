@@ -108,9 +108,9 @@ final class ProductImageAiVerifier
 
     private function providerName(): string
     {
-        $provider = $this->config('provider', 'anthropic');
+        $provider = $this->config('provider', 'regolo');
 
-        return is_string($provider) && trim($provider) !== '' ? strtolower(trim($provider)) : 'anthropic';
+        return is_string($provider) && trim($provider) !== '' ? strtolower(trim($provider)) : 'regolo';
     }
 
     private function modelName(): ?string

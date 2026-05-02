@@ -30,8 +30,8 @@ final class AiVerificationJobTest extends TestCase
         ]])->preventStrayPrompts();
 
         config()->set('product-image-discovery.ai.enabled', true);
-        config()->set('product-image-discovery.ai.provider', 'anthropic');
-        config()->set('product-image-discovery.ai.providers.anthropic.api_key', 'fake-key');
+        config()->set('product-image-discovery.ai.provider', 'regolo');
+        config()->set('product-image-discovery.ai.providers.regolo.api_key', 'fake-key');
         config()->set('product-image-discovery.ai.fail_silently', false);
 
         $store = new InMemoryPipelineStore();

@@ -26,8 +26,8 @@ final class ProductImageAiVerifierTest extends TestCase
         ]])->preventStrayPrompts();
 
         config()->set('product-image-discovery.ai.enabled', true);
-        config()->set('product-image-discovery.ai.provider', 'anthropic');
-        config()->set('product-image-discovery.ai.providers.anthropic.api_key', 'fake-key');
+        config()->set('product-image-discovery.ai.provider', 'regolo');
+        config()->set('product-image-discovery.ai.providers.regolo.api_key', 'fake-key');
         config()->set('product-image-discovery.ai.fail_silently', false);
 
         $result = (new ProductImageAiVerifier())->verify([
@@ -46,7 +46,7 @@ final class ProductImageAiVerifierTest extends TestCase
         self::assertTrue($result->match);
         self::assertTrue($result->variantSafe);
         self::assertSame(91, $result->confidence);
-        self::assertSame('anthropic', $result->provider);
+        self::assertSame('regolo', $result->provider);
 
         ProductImageCandidateVerifierAgent::assertPrompted(
             static fn (object $prompt): bool => str_contains($prompt->prompt, 'Air Force 1 07')

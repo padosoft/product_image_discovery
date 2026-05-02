@@ -22,6 +22,10 @@ abstract class TestCase extends OrchestraTestCase
             $providers[] = \Laravel\Ai\AiServiceProvider::class;
         }
 
+        if (class_exists(\Padosoft\LaravelAiRegolo\LaravelAiRegoloServiceProvider::class)) {
+            $providers[] = \Padosoft\LaravelAiRegolo\LaravelAiRegoloServiceProvider::class;
+        }
+
         return $providers;
     }
 

@@ -14,7 +14,7 @@ final class LiveProductImageAiVerifierTest extends TestCase
         $provider = $this->resolveProvider();
 
         if ($provider === null) {
-            self::markTestSkipped('Set ANTHROPIC_API_KEY, OPENROUTER_API_KEY, or OPENAI_API_KEY in .env to run the live AI verifier test.');
+            self::markTestSkipped('Set REGOLO_API_KEY, ANTHROPIC_API_KEY, OPENROUTER_API_KEY, or OPENAI_API_KEY in .env to run the live AI verifier test.');
         }
 
         [$providerName, $apiKey] = $provider;
@@ -30,6 +30,10 @@ final class LiveProductImageAiVerifierTest extends TestCase
         config()->set('product-image-discovery.ai.vision_model', $model);
         config()->set('ai.default', $providerName);
         config()->set("ai.providers.{$providerName}.key", $apiKey);
+
+        if ($providerName === 'regolo') {
+            config()->set('ai.providers.regolo.url', $this->envValue('REGOLO_URL') ?? $this->envValue('REGOLO_BASE_URL') ?? 'https://api.regolo.ai/v1');
+        }
 
         if ($providerName === 'openrouter') {
             config()->set('ai.providers.openrouter.url', $this->envValue('OPENROUTER_URL') ?? 'https://openrouter.ai/api/v1');
@@ -75,10 +79,11 @@ final class LiveProductImageAiVerifierTest extends TestCase
     private function resolveProvider(): ?array
     {
         $preferred = strtolower((string) ($this->envValue('PRODUCT_IMAGE_DISCOVERY_AI_PROVIDER') ?? ''));
-        $candidates = $preferred !== '' ? [$preferred] : ['anthropic', 'openrouter', 'openai'];
+        $candidates = $preferred !== '' ? [$preferred] : ['regolo', 'anthropic', 'openrouter', 'openai'];
 
-        foreach (array_unique([...$candidates, 'anthropic', 'openrouter', 'openai']) as $candidate) {
+        foreach (array_unique([...$candidates, 'regolo', 'anthropic', 'openrouter', 'openai']) as $candidate) {
             $keyName = match ($candidate) {
+                'regolo' => 'REGOLO_API_KEY',
                 'anthropic' => 'ANTHROPIC_API_KEY',
                 'openrouter' => 'OPENROUTER_API_KEY',
                 'openai' => 'OPENAI_API_KEY',
