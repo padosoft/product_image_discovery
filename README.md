@@ -8,6 +8,33 @@
 
 ![Product Image Discovery banner](resources/banner.png)
 
+## Table of Contents
+
+- [Responsible Use Disclaimer](#responsible-use-disclaimer)
+- [Why This Package](#why-this-package)
+- [What It Does](#what-it-does)
+- [Architecture](#architecture)
+- [Web Admin UI](#web-admin-ui)
+- [Request Flow](#request-flow)
+- [Installation](#installation)
+- [Live Smoke Test From A Fresh Laravel App](#live-smoke-test-from-a-fresh-laravel-app)
+- [Debug Flow Command](#debug-flow-command)
+- [Quickstart](#quickstart)
+- [EAN / Barcode Matching](#ean--barcode-matching)
+- [Real Product Payload Examples](#real-product-payload-examples)
+- [Configuration](#configuration)
+- [Search Providers](#search-providers)
+- [Trusted Sources](#trusted-sources)
+- [Optional Playwright Sidecar](#optional-playwright-sidecar)
+- [AI And Vision](#ai-and-vision)
+- [Testing](#testing)
+- [Database Tables](#database-tables)
+- [Safety Notes](#safety-notes)
+- [Admin UI Guidance](#admin-ui-guidance)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License & credits](#license--credits)
+
 Find the right product image, not just any image.
 
 `padosoft/product-image-discovery` is a Laravel package for discovering, verifying, scoring and preparing product images from supplier data, search providers and trusted sources. It is built for catalog teams, ERPs, PIMs and marketplaces where the expensive mistake is not "we found no image"; the expensive mistake is publishing the wrong image for a product-color variant.
@@ -51,6 +78,16 @@ The package is split into small layers so you can replace the parts that touch i
 - **Search layer**: provider definitions, database repository, provider manager and provider factories.
 - **Decision layer**: deterministic scoring, anti-false-positive checks and quality thresholds.
 - **Sidecar layer**: optional Node service for rendering JavaScript-heavy product pages with Playwright.
+
+## Web Admin UI
+
+Need a ready-made back office for this package? The professional Laravel admin is already available as a sister repository:
+
+**[`padosoft/product_image_discovery_admin`](https://github.com/padosoft/product_image_discovery_admin)**
+
+It provides an operational dashboard, request review queues, candidate comparison, protected image previews, approve/reject/retry actions, provider and trusted-source configuration, debug-flow execution, health checks, report inspection, API workbench tooling, CSV export, saved demo filters and a GitHub Actions release gate.
+
+![Product Image Discovery Admin dashboard](resources/ProductImageSearch-dashboard.png)
 
 ## Request Flow
 
@@ -948,6 +985,15 @@ Pull requests are welcome. Before opening one:
 4. Run the sidecar suite if you touched `sidecar/`.
 5. Update docs when behavior, configuration or architecture changes.
 
-## License
+## License & credits
 
 Apache-2.0. See [LICENSE](LICENSE).
+
+Sister packages in the Padosoft AI stack:
+
+- `padosoft/laravel-ai-regolo` -- first-class Regolo (Italian sovereign AI) provider for `laravel/ai`.
+- `padosoft/laravel-flow` -- saga / workflow orchestration for Laravel.
+- `padosoft/eval-harness` -- RAG + agent evaluation harness.
+- `padosoft/laravel-pii-redactor` -- PII redaction middleware for AI prompts.
+
+Each is independently usable. None requires the others. Pick what you need.
