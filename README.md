@@ -12,6 +12,8 @@
 
 - [Responsible Use Disclaimer](#responsible-use-disclaimer)
 - [Why This Package](#why-this-package)
+- [Quick Start (5 minutes, junior-friendly)](#quick-start-5-minutes-junior-friendly)
+- [Supported Search Providers](#supported-search-providers)
 - [What It Does](#what-it-does)
 - [Architecture](#architecture)
 - [Web Admin UI](#web-admin-ui)
@@ -23,7 +25,6 @@
 - [EAN / Barcode Matching](#ean--barcode-matching)
 - [Real Product Payload Examples](#real-product-payload-examples)
 - [Configuration](#configuration)
-- [Search Providers](#search-providers)
 - [Trusted Sources](#trusted-sources)
 - [Optional Playwright Sidecar](#optional-playwright-sidecar)
 - [AI And Vision](#ai-and-vision)
@@ -55,6 +56,237 @@ Use this package only for lawful, authorized product image discovery workflows. 
 - Browser optional: Playwright runs in a separate Node sidecar and is not required for basic usage.
 - AI-assisted, not AI-dependent: optional LLM/vision verification can enrich decisions without making the core fragile.
 - Testable offline: the default test suite uses SQLite, fake providers and deterministic sidecar tests.
+
+## Quick Start (5 minutes, junior-friendly)
+
+Goal: from a fresh Laravel 13 app to a passing end-to-end discovery request, **without paid keys**, copy-pasting nine blocks in order. The pipeline runs synchronously and returns a stored candidate from a bundled fake provider, so you can see the full flow before plugging in any external API.
+
+> Prerequisites: PHP 8.3+, Composer, a clean Laravel 13 app, ~5 minutes. No queue worker, no Redis, no Node, no API keys.
+
+**1. Require the package**
+
+```bash
+composer require padosoft/product-image-discovery
+```
+
+**2. Publish config**
+
+```bash
+php artisan vendor:publish --tag=product-image-discovery-config
+```
+
+**3. Publish migrations**
+
+```bash
+php artisan vendor:publish --tag=product-image-discovery-migrations
+```
+
+**4. Create the SQLite database file**
+
+```bash
+touch database/database.sqlite
+```
+
+On Windows PowerShell:
+
+```powershell
+New-Item -ItemType File database/database.sqlite -Force
+```
+
+**5. Migrate**
+
+```bash
+php artisan migrate
+```
+
+**6. Seed default settings + provider templates**
+
+```bash
+php artisan db:seed --class="Padosoft\ProductImageDiscovery\Database\Seeders\ProductImageDiscoveryDefaultsSeeder"
+```
+
+**7. Minimal `.env` overrides** (append four lines)
+
+```env
+DB_CONNECTION=sqlite
+DB_DATABASE=database/database.sqlite
+QUEUE_CONNECTION=sync
+PRODUCT_IMAGE_DISCOVERY_ROUTE_PREFIX=api/product-image-discovery
+```
+
+**8. Activate the bundled fake provider + issue a token via tinker**
+
+```bash
+php artisan tinker
+```
+
+Inside Tinker, paste this single block:
+
+```php
+\Padosoft\ProductImageDiscovery\Models\ProductImageSearchProvider::updateOrCreate(
+    ['code' => 'fake-smoke'],
+    [
+        'name' => 'Fake Smoke Provider',
+        'driver' => 'fake',
+        'config' => [
+            'supports_image_search' => true,
+            'image_results' => [[
+                'title' => 'Demo result',
+                'page_url' => 'https://example.test/p/demo',
+                'image_url' => 'data:image/jpeg;base64,'.base64_encode(str_repeat('a', 120000)),
+                'source_domain' => 'example.test',
+                'width' => 1200,
+                'height' => 1200,
+                'provider_metadata' => [
+                    'inline_image_base64' => base64_encode(str_repeat('a', 120000)),
+                    'inline_extension' => 'jpg',
+                ],
+            ]],
+        ],
+        'priority' => 1,
+        'timeout_seconds' => 10,
+        'is_active' => true,
+    ],
+);
+
+use Laravel\Sanctum\HasApiTokens;
+$user = \App\Models\User::factory()->create(['email' => 'pid-quickstart@example.test']);
+echo $user->createToken('pid-quickstart', ['product-image-discovery:write','product-image-discovery:read'])->plainTextToken.PHP_EOL;
+```
+
+Copy the printed token. Exit tinker.
+
+> If `App\Models\User` does not use `Laravel\Sanctum\HasApiTokens`, add the trait first — see step 4 in [Live Smoke Test From A Fresh Laravel App](#live-smoke-test-from-a-fresh-laravel-app).
+
+**9. Hit the API** (replace `YOUR_TOKEN`)
+
+```bash
+php artisan serve
+```
+
+In another terminal:
+
+```bash
+curl -X POST "http://127.0.0.1:8000/api/product-image-discovery/requests" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "client_id": 1,
+    "erp_model_id": "DEMO-1",
+    "erp_model_color_id": "DEMO-1-BLACK",
+    "brand": "Demo",
+    "model_code": "DEMO-1",
+    "color_name": "Black"
+  }'
+```
+
+You should receive `{"ok":true, "request_id":1, "status":"queued"}`.
+
+✅ Done — you just ran the full ingest → search → extract → verify → download → quality pipeline locally with a deterministic fake provider. Next steps:
+
+- **Enable a real provider** (Brave, Tavily, Exa.ai, Firecrawl, WebSearchAPI, DuckDuckGo): see [Supported Search Providers](#supported-search-providers) below.
+- **Run the live debug flow** with a real product payload: see [Debug Flow Command](#debug-flow-command).
+- **Full host-app walkthrough** with Sanctum scopes and Brave: see [Live Smoke Test From A Fresh Laravel App](#live-smoke-test-from-a-fresh-laravel-app).
+
+## Supported Search Providers
+
+Out of the box, the package ships with **7 search providers** ready to plug in: 1 deterministic for tests + 6 live drivers covering global, EU-friendly, free-tier, and scrape-friendly options. All providers are stored in `product_image_search_providers` and resolved through a single `SearchProviderManager`, so swapping one for another is a row update.
+
+| Provider | Driver | Image search | Site filter | Free tier | Docs |
+|---|---|---|---|---|---|
+| Fake (deterministic) | `fake` | ✅ | ✅ | — | n/a — bundled for tests |
+| Brave Search | `brave` | ✅ | ✅ | 2000 / month | <https://api-dashboard.search.brave.com/app/documentation> |
+| Tavily | `tavily` | ✅ | ✅ (`include_domains`) | 1000 credits / month | <https://docs.tavily.com> |
+| Exa.ai | `exa` | ✅ (`extras.imageLinks`) | ✅ (`includeDomains`) | Free trial credits | <https://docs.exa.ai> |
+| Firecrawl | `firecrawl` | ✅ (`sources:["images"]`) | ✅ (via `site:` operator) | 500 credits / month | <https://docs.firecrawl.dev/api-reference/v2-endpoint/search> |
+| WebSearchAPI.ai | `websearchapi` | ✅ (`engine=google_images`) | ✅ (via `site:` operator) | Free trial credits | <https://www.websearchapi.ai/docs> |
+| DuckDuckGo (HTML lite) | `duckduckgo` | ❌ | ✅ (via `site:` operator) | No key required | <https://duckduckgo.com/html/> |
+
+> Templates for `serpapi` and `google_custom_search` are seeded but not yet implemented — see [Roadmap](#roadmap).
+
+> ⚠️ Provider configs are redacted in audit logs. Always store secrets in `.env` and let the seeders/tinker scripts populate `api_key_encrypted`, never expose API keys through user-facing endpoints.
+
+### Brave Search
+
+```env
+BRAVE_SEARCH_API_KEY=your-key
+```
+
+Activate the seeded provider:
+
+```php
+$p = \Padosoft\ProductImageDiscovery\Models\ProductImageSearchProvider::where('code', 'brave')->firstOrFail();
+$p->api_key_encrypted = env('BRAVE_SEARCH_API_KEY');
+$p->is_active = true;
+$p->save();
+```
+
+### Tavily
+
+JSON search API with first-class image support (`images[]`) and `include_domains` site filtering.
+
+```env
+TAVILY_API_KEY=your-key
+TAVILY_URL=https://api.tavily.com
+```
+
+Activate:
+
+```php
+$p = \Padosoft\ProductImageDiscovery\Models\ProductImageSearchProvider::where('code', 'tavily')->firstOrFail();
+$p->api_key_encrypted = env('TAVILY_API_KEY');
+$p->is_active = true;
+$p->save();
+```
+
+### Exa.ai
+
+Keyword/embedding search with optional content `extras.imageLinks` per result. Site filter via `includeDomains`.
+
+```env
+EXA_API_KEY=your-key
+EXA_URL=https://api.exa.ai
+```
+
+> Implementation lands in PR2 of the [Search Providers roadmap](docs/ROADMAP_SEARCH_PROVIDERS.md).
+
+### Firecrawl
+
+`POST /v2/search` with `sources:["web","images"]`. Bearer auth. Site filter is appended as a `site:` operator to the query.
+
+```env
+FIRECRAWL_API_KEY=your-key
+FIRECRAWL_URL=https://api.firecrawl.dev
+```
+
+> Implementation lands in PR3 of the [Search Providers roadmap](docs/ROADMAP_SEARCH_PROVIDERS.md).
+
+### WebSearchAPI.ai
+
+`GET /api/v1/search?engine=google_images` for images, `engine=google` for web. Auth via `apikey` query param.
+
+```env
+WEBSEARCHAPI_API_KEY=your-key
+WEBSEARCHAPI_URL=https://www.websearchapi.ai
+```
+
+> Implementation lands in PR4 of the [Search Providers roadmap](docs/ROADMAP_SEARCH_PROVIDERS.md).
+
+### DuckDuckGo (HTML lite)
+
+Free, no-API-key fallback for web search. Parses `html.duckduckgo.com/html` with `\DOMDocument`. **No image search**: `supportsImageSearch()` returns `false`, so `SearchProviderManager` skips it for image queries automatically.
+
+```env
+# Optional override (defaults to https://html.duckduckgo.com):
+DUCKDUCKGO_URL=https://html.duckduckgo.com
+```
+
+> Implementation lands in PR5 of the [Search Providers roadmap](docs/ROADMAP_SEARCH_PROVIDERS.md). Use it sparingly and respect DuckDuckGo's terms — it is best as a low-volume fallback, not a primary driver.
+
+### Fake provider
+
+Deterministic, no network. Use it for local smoke tests, CI and unit tests. See the [Quick Start](#quick-start-5-minutes-junior-friendly) above for an example configuration that feeds an inline base64 image directly into the download/quality steps.
 
 ## What It Does
 
@@ -806,18 +1038,6 @@ Important options:
 - `storage.disk`: disk used for candidate assets.
 - `defaults`: search, quality and decision thresholds.
 
-## Search Providers
-
-Search providers are stored in `product_image_search_providers`.
-
-The package includes:
-
-- `fake`: deterministic test provider.
-- `brave`: Brave Search provider implementation.
-- Provider templates for SerpAPI and Google Custom Search, ready to be implemented/enabled.
-
-Provider configs are redacted in audit logs. Store secrets in config/env where possible, and never expose API keys through user-facing endpoints.
-
 ## Trusted Sources
 
 Trusted source records let you prefer domains that are known to publish correct product images for a client or brand. A trusted source should improve confidence, but it should not bypass hard checks such as wrong color, wrong model, placeholder image or low-quality asset.
@@ -983,12 +1203,23 @@ This package stays headless. If you want to integrate a review/configuration exp
 
 ## Roadmap
 
-- First-party SerpAPI and Google Custom Search drivers.
+**Recent additions (since v0.1.0):**
+
+- 6 live search providers wired through a single `SearchProviderManager`: `brave`, `tavily`, `exa`, `firecrawl`, `websearchapi`, `duckduckgo` (some land progressively across the PRs tracked in [docs/ROADMAP_SEARCH_PROVIDERS.md](docs/ROADMAP_SEARCH_PROVIDERS.md)).
+- Shared `AbstractHttpSearchProvider` so new drivers add ~80 LOC of provider-specific code.
+- GitHub Actions CI for PHP 8.3 / 8.4 + Node sidecar.
+- Junior-friendly [Quick Start](#quick-start-5-minutes-junior-friendly) that brings a fresh Laravel 13 app to a successful API response in 5 minutes without external keys.
+- Optional Regolo, Anthropic, OpenAI and OpenRouter providers for AI-assisted candidate verification.
+- EAN / GTIN / barcode alias normalization with strong-match scoring.
+
+**Planned:**
+
+- First-party SerpAPI and Google Custom Search drivers (templates already seeded).
 - Richer AI review signals while keeping deterministic checks as the publication gate.
-- Richer duplicate detection through perceptual hashing.
+- Perceptual-hashing duplicate detection.
 - Image enhancement pipeline behind explicit config.
-- Host-admin UI integration examples.
-- GitHub Actions workflow for PHP, Node and static analysis.
+- Host-admin UI integration examples (sister repo: [`padosoft/product_image_discovery_admin`](https://github.com/padosoft/product_image_discovery_admin)).
+- Runtime enforcement of `rate_limit_per_minute` (currently advisory only).
 
 ## Contributing
 
