@@ -6,7 +6,7 @@ namespace Padosoft\ProductImageDiscovery\Services\Search;
 
 use RuntimeException;
 use Throwable;
-use Padosoft\ProductImageDiscovery\Services\Logging\ProductImageEventLogger;
+use Padosoft\ProductImageDiscovery\Services\Search\Contracts\SearchEventLoggerInterface;
 use Padosoft\ProductImageDiscovery\Services\Search\Data\ProductImageSearchQueryData;
 use Padosoft\ProductImageDiscovery\Services\Search\Data\ProductImageSearchResultCollection;
 use Padosoft\ProductImageDiscovery\Services\Search\Data\SearchProviderDefinition;
@@ -27,7 +27,7 @@ final class SearchProviderManager
         private readonly SearchProviderConfigRepositoryInterface $repository,
         array $factories = [],
         private readonly array $fallbackProviders = [],
-        private readonly ?ProductImageEventLogger $logger = null,
+        private readonly ?SearchEventLoggerInterface $logger = null,
     ) {
         foreach ($factories as $driver => $factory) {
             $this->registerFactory($driver, $factory);
