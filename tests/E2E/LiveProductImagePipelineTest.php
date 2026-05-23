@@ -16,8 +16,8 @@ use Padosoft\ProductImageDiscovery\Jobs\IngestProductImageDiscoveryJob;
 use Padosoft\ProductImageDiscovery\Jobs\SearchProductImageJob;
 use Padosoft\ProductImageDiscovery\Jobs\VerifyCandidateImageJob;
 use Padosoft\ProductImageDiscovery\Models\ProductImageSearchProvider;
+use Padosoft\LaravelAiSearchProviders\SearchProviderManager;
 use Padosoft\ProductImageDiscovery\Services\Logging\ProductImageEventLogger;
-use Padosoft\ProductImageDiscovery\Services\Search\SearchProviderManager;
 use Padosoft\ProductImageDiscovery\Tests\TestCase;
 
 final class LiveProductImagePipelineTest extends TestCase

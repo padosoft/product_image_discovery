@@ -16,9 +16,9 @@ use Padosoft\ProductImageDiscovery\Enums\ProductImageDiscoveryRequestStatus;
 use Padosoft\ProductImageDiscovery\Jobs\Concerns\DispatchesPipelineJobs;
 use Padosoft\ProductImageDiscovery\Jobs\Concerns\ResolvesQueueName;
 use Padosoft\ProductImageDiscovery\Jobs\Contracts\PipelineStoreInterface;
+use Padosoft\LaravelAiSearchProviders\Data\SearchQueryData as ProviderSearchQueryData;
+use Padosoft\LaravelAiSearchProviders\SearchProviderManager;
 use Padosoft\ProductImageDiscovery\Services\Logging\ProductImageEventLogger;
-use Padosoft\ProductImageDiscovery\Services\Search\Data\ProductImageSearchQueryData;
-use Padosoft\ProductImageDiscovery\Services\Search\SearchProviderManager;
 
 final class SearchProductImageJob implements ShouldQueue
 {
@@ -77,7 +77,7 @@ final class SearchProductImageJob implements ShouldQueue
         $execution = null;
 
         foreach ($searchQueries as $searchQuery) {
-            $execution = $manager->searchImages(ProductImageSearchQueryData::fromArray([
+            $execution = $manager->searchImages(ProviderSearchQueryData::fromArray([
                 'client_id' => $identity->clientId,
                 'brand' => $identity->brand,
                 'model' => $identity->modelCode ?? $identity->description,
@@ -100,7 +100,7 @@ final class SearchProductImageJob implements ShouldQueue
             }
         }
 
-        $execution ??= $manager->searchImages(ProductImageSearchQueryData::fromArray([
+        $execution ??= $manager->searchImages(ProviderSearchQueryData::fromArray([
             'client_id' => $identity->clientId,
             'query' => $identity->ean ?? $identity->supplierSku ?? $identity->modelCode ?? '',
         ]));

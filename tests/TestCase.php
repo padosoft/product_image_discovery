@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Padosoft\ProductImageDiscovery\Tests;
 
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
+use Padosoft\LaravelAiSearchProviders\LaravelAiSearchProvidersServiceProvider;
 use Padosoft\ProductImageDiscovery\ProductImageDiscoveryServiceProvider;
 
 abstract class TestCase extends OrchestraTestCase
@@ -15,6 +16,7 @@ abstract class TestCase extends OrchestraTestCase
     protected function getPackageProviders($app): array
     {
         $providers = [
+            LaravelAiSearchProvidersServiceProvider::class,
             ProductImageDiscoveryServiceProvider::class,
         ];
 

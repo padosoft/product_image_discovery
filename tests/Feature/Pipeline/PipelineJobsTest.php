@@ -12,12 +12,12 @@ use Padosoft\ProductImageDiscovery\Jobs\IngestProductImageDiscoveryJob;
 use Padosoft\ProductImageDiscovery\Jobs\SearchProductImageJob;
 use Padosoft\ProductImageDiscovery\Jobs\VerifyCandidateImageJob;
 use Padosoft\ProductImageDiscovery\Services\Logging\ProductImageEventLogger;
-use Padosoft\ProductImageDiscovery\Services\Search\CallableSearchProviderFactory;
-use Padosoft\ProductImageDiscovery\Services\Search\Data\SearchProviderDefinition;
-use Padosoft\ProductImageDiscovery\Services\Search\FakeSearchProvider;
-use Padosoft\ProductImageDiscovery\Services\Search\SearchProviderManager;
+use Padosoft\LaravelAiSearchProviders\CallableSearchProviderFactory;
+use Padosoft\LaravelAiSearchProviders\Data\SearchProviderDefinition;
+use Padosoft\LaravelAiSearchProviders\Providers\FakeSearchProvider;
+use Padosoft\LaravelAiSearchProviders\SearchProviderManager;
+use Padosoft\ProductImageDiscovery\Tests\Support\InMemorySearchProviderConfigRepository;
 use Tests\Feature\Pipeline\Support\InMemoryPipelineStore;
-use Tests\Unit\Search\Support\InMemorySearchProviderConfigRepository;
 
 final class PipelineJobsTest extends TestCase
 {
