@@ -166,4 +166,39 @@ Implementare il modulo Product Image Discovery & Verification come package Larav
 
 - Add real external providers beyond Brave (`serpapi`, `google_custom_search`) when API credentials and contracts are decided.
 - Add a first-party Laravel app demo or example screenshots after the package API stabilizes.
-- Add CI workflows for PHP, Node sidecar, static analysis and coverage.
+
+## Session 2026-05-23
+
+### Goal
+
+Wire five new search providers (Tavily, Exa.ai, Firecrawl, WebSearchAPI, DuckDuckGo) on top of the existing Brave driver, introduce CI, and revamp the README with a junior-friendly Quick Start and a dedicated "Supported Search Providers" section. Tracked in `docs/ROADMAP_SEARCH_PROVIDERS.md`. One PR per provider.
+
+### PR1 — feat/search-provider-tavily (foundation + Tavily + README revamp + CI)
+
+In progress. Completed sub-tasks:
+
+- Extracted `src/Services/Search/AbstractHttpSearchProvider.php` with the helpers previously inlined in `BraveSearchProvider` (`pickUrl`, `pick`, `dotGet`, `extractDomain`, `normalizeDomain`, `normalizeInt`, `normalizeFloat`, `applySiteFilter`, `assertHttpClientAvailable`). Brave now extends it with zero behavior change — existing `BraveSearchProviderTest` keeps passing.
+- Extracted `tests/Concerns/ReadsLocalEnv.php` trait from the inline `envValue()` in `LiveBraveSearchProviderTest`. Brave live test now uses the trait.
+- Added `.github/workflows/ci.yml` with two jobs:
+  - `php-tests` matrix on PHP 8.3 and 8.4 (composer install, composer validate strict, phpunit Unit+Feature+E2E).
+  - `sidecar-tests` running `npm ci && npm test` against `sidecar/`.
+- Added `docs/ROADMAP_SEARCH_PROVIDERS.md` tracking 5 PRs with per-PR gates.
+- Implemented `src/Services/Search/TavilySearchProvider.php` (`POST /search` with `Authorization: Bearer`, `include_images=true`, `include_image_descriptions=true`, `include_domains` for site filter). Normalizes both legacy string-array `images` and modern object-array `images` payloads. Joins images to results by domain to recover `page_url`/`title`.
+- Registered `'tavily'` driver in `ProductImageDiscoveryServiceProvider`.
+- Seeded `code=tavily` (priority=40, disabled) in `ProductImageDiscoveryDefaultsSeeder`.
+- Added `tests/Unit/Search/TavilySearchProviderTest.php` with 6 cases (object images, legacy strings, empty payload, 401, site filter → include_domains, web search).
+- Added `tests/E2E/LiveTavilySearchProviderTest.php` (opt-in via `TAVILY_API_KEY`).
+- Updated `.env.example` with `TAVILY_API_KEY` + `TAVILY_URL`. Real key stored only in local `.env` (gitignored).
+- README revamp:
+  - New `## Quick Start (5 minutes, junior-friendly)` immediately after `Why This Package`. 9 copy-paste steps, ends with the fake provider returning a stored candidate. No Sanctum prerequisites, no paid keys, no sidecar.
+  - Replaced `## Search Providers` (3 bullets) with `## Supported Search Providers` (full matrix + per-provider env vars + tinker activation snippets + doc links). Emphasizes "7 search providers ready to plug in".
+  - TOC updated: added `Quick Start (5 minutes)` and renamed `Search Providers` → `Supported Search Providers`.
+  - `## Roadmap` refreshed: split into `Recent additions (since v0.1.0)` and `Planned`. Removed the obsolete "GitHub Actions workflow" bullet (now done).
+
+### Verified Gates (PR1, intermediate)
+
+- `vendor/bin/phpunit --testsuite Unit,Feature,E2E` PASS: 79 tests / 331 assertions / 2 skipped.
+- Baseline before this work was 72 tests / 319 / 1 skipped.
+- Skipped tests: sidecar contract (needs `SIDECAR_E2E_URL`) + live AI verifier (Anthropic credits exhausted on the dev account — handled by a new `InsufficientCreditsException` skip in `LiveProductImageAiVerifierTest` so the gate stays green when external quota is depleted).
+- Live Brave + Live Tavily tests both executed against real APIs (keys in `.env`, gitignored).
+- Composer validate strict: PASS via `& 'C:\Users\lopad\.config\herd\bin\php84\php.exe' 'C:\Program Files\Herd\resources\app.asar.unpacked\resources\bin\composer.phar' validate --strict --no-check-publish`.

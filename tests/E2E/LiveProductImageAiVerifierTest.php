@@ -47,22 +47,30 @@ final class LiveProductImageAiVerifierTest extends TestCase
             config()->set('ai.providers.openai.url', $this->envValue('OPENAI_URL') ?? 'https://api.openai.com/v1');
         }
 
-        $result = (new ProductImageAiVerifier())->verify([
-            'brand' => 'Nike',
-            'model_code' => 'Air Force 1 07',
-            'color_name' => 'White',
-            'color_code' => 'CW2288-111',
-            'category' => 'Sneakers',
-            'material' => 'Leather',
-        ], [
-            'title' => "Nike Air Force 1 '07 Men's Shoes White",
-            'source_page_url' => 'https://www.nike.com/t/air-force-1-07-mens-shoes-jBrhbr',
-            'image_url' => 'https://static.nike.com/a/images/t_web_pdp_535_v2/f_auto%2Cu_9ddf04c7-2a9a-4d76-add1-d15af8f0263d%2Cc_scale%2Cfl_relative%2Cw_1.0%2Ch_1.0%2Cfl_layer_apply/b7d9211c-26e7-431a-ac24-b0540fb3c00f/AIR%2BFORCE%2B1%2B%2707.png',
-            'source_domain' => 'nike.com',
-            'width' => 1200,
-            'height' => 1200,
-            'mime_type' => 'image/jpeg',
-        ]);
+        try {
+            $result = (new ProductImageAiVerifier())->verify([
+                'brand' => 'Nike',
+                'model_code' => 'Air Force 1 07',
+                'color_name' => 'White',
+                'color_code' => 'CW2288-111',
+                'category' => 'Sneakers',
+                'material' => 'Leather',
+            ], [
+                'title' => "Nike Air Force 1 '07 Men's Shoes White",
+                'source_page_url' => 'https://www.nike.com/t/air-force-1-07-mens-shoes-jBrhbr',
+                'image_url' => 'https://static.nike.com/a/images/t_web_pdp_535_v2/f_auto%2Cu_9ddf04c7-2a9a-4d76-add1-d15af8f0263d%2Cc_scale%2Cfl_relative%2Cw_1.0%2Ch_1.0%2Cfl_layer_apply/b7d9211c-26e7-431a-ac24-b0540fb3c00f/AIR%2BFORCE%2B1%2B%2707.png',
+                'source_domain' => 'nike.com',
+                'width' => 1200,
+                'height' => 1200,
+                'mime_type' => 'image/jpeg',
+            ]);
+        } catch (\Laravel\Ai\Exceptions\InsufficientCreditsException $exception) {
+            self::markTestSkipped(sprintf(
+                'Live AI provider [%s] has insufficient credits or quota: %s',
+                $providerName,
+                $exception->getMessage(),
+            ));
+        }
 
         self::assertTrue($result->available);
         self::assertSame('completed', $result->status);

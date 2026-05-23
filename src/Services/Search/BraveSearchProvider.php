@@ -4,18 +4,12 @@ declare(strict_types=1);
 
 namespace Padosoft\ProductImageDiscovery\Services\Search;
 
-use LogicException;
 use RuntimeException;
 use Padosoft\ProductImageDiscovery\Services\Search\Data\ProductImageSearchQueryData;
 use Padosoft\ProductImageDiscovery\Services\Search\Data\ProductImageSearchResultCollection;
-use Padosoft\ProductImageDiscovery\Services\Search\Data\SearchProviderDefinition;
 
-final class BraveSearchProvider implements ProductImageSearchProviderInterface
+final class BraveSearchProvider extends AbstractHttpSearchProvider
 {
-    public function __construct(private readonly SearchProviderDefinition $definition)
-    {
-    }
-
     public function searchImages(ProductImageSearchQueryData $query): ProductImageSearchResultCollection
     {
         $payload = $this->request('/res/v1/images/search', [
@@ -95,24 +89,13 @@ final class BraveSearchProvider implements ProductImageSearchProviderInterface
         }, array_values(array_filter($results, static fn (mixed $hit): bool => is_array($hit)))));
     }
 
-    public function supportsImageSearch(): bool
-    {
-        return true;
-    }
-
-    public function supportsSiteFilter(): bool
-    {
-        return true;
-    }
-
     /**
+     * @param  array<string, mixed>  $query
      * @return array<string, mixed>
      */
     private function request(string $path, array $query): array
     {
-        if (! class_exists(\Illuminate\Support\Facades\Http::class)) {
-            throw new LogicException('Illuminate HTTP client is required to use BraveSearchProvider.');
-        }
+        $this->assertHttpClientAvailable();
 
         $response = \Illuminate\Support\Facades\Http::baseUrl($this->definition->baseUrl ?? 'https://api.search.brave.com')
             ->acceptJson()
@@ -123,106 +106,5 @@ final class BraveSearchProvider implements ProductImageSearchProviderInterface
             ->get($path, array_filter($query, static fn (mixed $value): bool => $value !== null && $value !== ''));
 
         return $response->throw()->json();
-    }
-
-    private function applySiteFilter(ProductImageSearchQueryData $query): string
-    {
-        $searchString = $query->toSearchString();
-
-        if ($query->site === null || $query->site === '') {
-            return $searchString;
-        }
-
-        return trim($searchString.' site:'.$query->site);
-    }
-
-    private function pick(array $payload, array $paths): mixed
-    {
-        foreach ($paths as $path) {
-            $value = $this->dotGet($payload, $path);
-
-            if ($value !== null && $value !== '') {
-                return $value;
-            }
-        }
-
-        return null;
-    }
-
-    private function pickUrl(array $payload, array $paths): ?string
-    {
-        foreach ($paths as $path) {
-            $value = $this->pick($payload, [$path]);
-
-            if (! is_string($value) || trim($value) === '') {
-                continue;
-            }
-
-            $value = trim($value);
-
-            if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
-                return $value;
-            }
-        }
-
-        return null;
-    }
-
-    private function dotGet(array $payload, string $path): mixed
-    {
-        $segments = explode('.', $path);
-        $value = $payload;
-
-        foreach ($segments as $segment) {
-            if (! is_array($value) || ! array_key_exists($segment, $value)) {
-                return null;
-            }
-
-            $value = $value[$segment];
-        }
-
-        return $value;
-    }
-
-    private function extractDomain(?string $url): ?string
-    {
-        if ($url === null || $url === '') {
-            return null;
-        }
-
-        return parse_url($url, PHP_URL_HOST) ?: null;
-    }
-
-    private function normalizeDomain(mixed $domain): ?string
-    {
-        if (! is_string($domain) || trim($domain) === '') {
-            return null;
-        }
-
-        $domain = trim($domain);
-
-        if (str_starts_with($domain, 'http://') || str_starts_with($domain, 'https://')) {
-            return $this->extractDomain($domain);
-        }
-
-        return preg_match('/^[a-z0-9.-]+\.[a-z]{2,}$/i', $domain) === 1 ? strtolower($domain) : null;
-    }
-
-    private function normalizeInt(mixed $value): ?int
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        return (int) $value;
-    }
-
-    private function normalizeFloat(mixed $value): ?float
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        return (float) $value;
     }
 }

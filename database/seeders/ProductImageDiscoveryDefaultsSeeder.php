@@ -102,6 +102,23 @@ class ProductImageDiscoveryDefaultsSeeder extends Seeder
                 'is_active' => false,
             ],
             [
+                'code' => 'tavily',
+                'name' => 'Tavily Search',
+                'driver' => 'tavily',
+                'base_url' => 'https://api.tavily.com',
+                'config' => [
+                    'supports_image_search' => true,
+                    'supports_site_filter' => true,
+                    'supports_web_search' => true,
+                    'max_results_per_request' => 20,
+                    'search_depth' => 'basic',
+                ],
+                'priority' => 40,
+                'timeout_seconds' => 20,
+                'rate_limit_per_minute' => 60,
+                'is_active' => false,
+            ],
+            [
                 'code' => 'serpapi',
                 'name' => 'SerpAPI',
                 'driver' => 'serpapi',
