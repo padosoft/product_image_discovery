@@ -36,7 +36,8 @@
         "illuminate/validation": "^13.0",
         "laravel/ai": "^0.6.5",
         "laravel/sanctum": "^4.2",
-        "padosoft/laravel-ai-regolo": "^0.2.3"
+        "padosoft/laravel-ai-regolo": "^0.2.3",
+        "padosoft/laravel-ai-search-providers": "^1.0"
     },
     "require-dev": {
         "mockery/mockery": "^1.6",

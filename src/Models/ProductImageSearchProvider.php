@@ -4,44 +4,21 @@ declare(strict_types=1);
 
 namespace Padosoft\ProductImageDiscovery\Models;
 
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
+use Padosoft\LaravelAiSearchProviders\Models\SearchProviderConfig;
 
-class ProductImageSearchProvider extends Model
+/**
+ * Backwards-compatible Eloquent model.
+ *
+ * The search layer lives in `padosoft/laravel-ai-search-providers` since
+ * `product-image-discovery v1.0.0`. This thin subclass preserves the legacy
+ * table name (`product_image_search_providers`) and class name so existing
+ * host applications, the `padosoft/product_image_discovery_admin` sister
+ * package and any custom integrations keep working unchanged.
+ *
+ * New code should reference `Padosoft\LaravelAiSearchProviders\Models\SearchProviderConfig`
+ * directly.
+ */
+class ProductImageSearchProvider extends SearchProviderConfig
 {
     protected $table = 'product_image_search_providers';
-
-    protected $fillable = [
-        'code',
-        'name',
-        'driver',
-        'base_url',
-        'api_key_encrypted',
-        'api_secret_encrypted',
-        'config',
-        'priority',
-        'timeout_seconds',
-        'rate_limit_per_minute',
-        'is_active',
-    ];
-
-    protected $casts = [
-        'api_key_encrypted' => 'encrypted',
-        'api_secret_encrypted' => 'encrypted',
-        'config' => 'array',
-        'priority' => 'integer',
-        'timeout_seconds' => 'integer',
-        'rate_limit_per_minute' => 'integer',
-        'is_active' => 'boolean',
-    ];
-
-    public function scopeActive(Builder $query): Builder
-    {
-        return $query->where('is_active', true);
-    }
-
-    public function scopeOrdered(Builder $query): Builder
-    {
-        return $query->orderBy('priority')->orderBy('id');
-    }
 }

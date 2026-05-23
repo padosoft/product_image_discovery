@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Padosoft\ProductImageDiscovery\Services\Logging;
 
-use Padosoft\ProductImageDiscovery\Services\Search\Contracts\SearchEventLoggerInterface;
+use Padosoft\LaravelAiSearchProviders\Contracts\SearchEventLoggerInterface;
 
 final class ProductImageEventLogger implements SearchEventLoggerInterface
 {

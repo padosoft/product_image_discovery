@@ -297,3 +297,30 @@ Verified Gates (PR #8):
 
 - `vendor/bin/phpunit --testsuite Unit,Feature,E2E` PASS: 103 tests / 396 assertions / 2 skipped (no test count change — pure refactor).
 - Composer validate strict PASS.
+
+## Session 2026-05-23 (afternoon)
+
+Extraction completed. The search layer now lives in its own composer package, `padosoft/laravel-ai-search-providers v1.0.0` (https://github.com/padosoft/laravel-ai-search-providers, https://packagist.org/packages/padosoft/laravel-ai-search-providers). The package was developed across 6 PRs (A1–A6) and tagged `v1.0.0`.
+
+### PR B1 — refactor: depend on padosoft/laravel-ai-search-providers, drop in-tree search layer
+
+Branch `refactor/depend-on-ai-search-providers`.
+
+- `composer require padosoft/laravel-ai-search-providers:^1.0` (v1.0.0 installed from Packagist).
+- Removed `src/Services/Search/` (17 files) and `tests/Unit/Search/` (10 files including fixtures + support helper) and the 5 moved live tests under `tests/E2E/` and `tests/Concerns/ReadsLocalEnv.php`.
+- `src/Models/ProductImageSearchProvider.php` rewritten as a 3-line subclass of `Padosoft\LaravelAiSearchProviders\Models\SearchProviderConfig` that hard-codes `$table = 'product_image_search_providers'`. Scopes/casts inherited from the package model. `padosoft/product_image_discovery_admin` keeps working unchanged.
+- `src/ProductImageDiscoveryServiceProvider.php`:
+  - Removed all factory registrations, the local `SearchProviderManager` singleton, and the `SearchEventLoggerInterface` contract that lived inside the package.
+  - `register()` sets `ai-search-providers.table = 'product_image_search_providers'` and `ai-search-providers.model = ProductImageSearchProvider::class` so the package's `EloquentSearchProviderConfigRepository` reads from the legacy table.
+  - Binds the package's `SearchEventLoggerInterface` to the local `ProductImageEventLogger`, so every provider attempt continues to land in the `product_image_discovery_events` audit trail.
+- `src/Services/Logging/ProductImageEventLogger.php`: single import change — implements `Padosoft\LaravelAiSearchProviders\Contracts\SearchEventLoggerInterface` (no API change, just the namespace).
+- `src/Jobs/SearchProductImageJob.php`, `src/Console/Commands/ProductImageDiscoveryDebugFlowCommand.php`, `tests/Feature/Pipeline/PipelineJobsTest.php`, `tests/E2E/LiveBraveSearchProviderTest.php`, `tests/E2E/LiveProductImagePipelineTest.php`: switched imports to the package namespaces (`Padosoft\LaravelAiSearchProviders\…`). The local DTO alias `ProductImageSearchQueryData` was replaced with the package's `SearchQueryData` (aliased as `ProviderSearchQueryData` in the job to disambiguate from the domain-specific `Padosoft\ProductImageDiscovery\DTO\SearchQueryData` used by the query-builder layer).
+- New `tests/Support/InMemorySearchProviderConfigRepository.php` — local 20-line helper that implements the package's `SearchProviderConfigRepositoryInterface`. (The package's own in-memory helper is in its `autoload-dev` namespace and not visible to consumers.)
+- `tests/TestCase.php` registers both `LaravelAiSearchProvidersServiceProvider` and `ProductImageDiscoveryServiceProvider` so Testbench sees the search-providers package bindings (`EloquentSearchProviderConfigRepository`, default factories) in addition to the local providers.
+- `LiveBraveSearchProviderTest` rewritten as a focused integration test that exercises the wiring between consumer and package: insert a row via the local `ProductImageSearchProvider` subclass, resolve the package's `SearchProviderManager`, verify the attempt succeeds against the live Brave API. The standalone live test (without DB) moved to the package's own E2E suite.
+
+### Verified Gates (PR B1)
+
+- `vendor/bin/phpunit --testsuite Unit,Feature,E2E` PASS: 69 tests, 294 assertions, 2 skipped. Baseline before extraction was 103 / 396 / 2; the 34 dropped tests + 102 assertions moved to the package's own suite.
+- `composer validate --strict --no-check-publish`: PASS.
+- Live AI verifier test still gracefully skips on insufficient credits.

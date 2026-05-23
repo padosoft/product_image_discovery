@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Search\Support;
+namespace Padosoft\ProductImageDiscovery\Tests\Support;
 
-use Padosoft\ProductImageDiscovery\Services\Search\Data\SearchProviderDefinition;
-use Padosoft\ProductImageDiscovery\Services\Search\SearchProviderConfigRepositoryInterface;
+use Padosoft\LaravelAiSearchProviders\Contracts\SearchProviderConfigRepositoryInterface;
+use Padosoft\LaravelAiSearchProviders\Data\SearchProviderDefinition;
 
 final class InMemorySearchProviderConfigRepository implements SearchProviderConfigRepositoryInterface
 {
@@ -16,6 +16,9 @@ final class InMemorySearchProviderConfigRepository implements SearchProviderConf
     {
     }
 
+    /**
+     * @return array<int, SearchProviderDefinition>
+     */
     public function getActiveProviders(): array
     {
         return $this->definitions;
