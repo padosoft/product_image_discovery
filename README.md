@@ -242,14 +242,23 @@ $p->save();
 
 ### Exa.ai
 
-Keyword/embedding search with optional content `extras.imageLinks` per result. Site filter via `includeDomains`.
+`POST /search` with `contents.extras.imageLinks` per result, flattened into one candidate per image URL. Site filter via `includeDomains`. Auth via `x-api-key` header.
 
 ```env
 EXA_API_KEY=your-key
 EXA_URL=https://api.exa.ai
 ```
 
-> Implementation lands in PR2 of the [Search Providers roadmap](docs/ROADMAP_SEARCH_PROVIDERS.md).
+Activate:
+
+```php
+$p = \Padosoft\ProductImageDiscovery\Models\ProductImageSearchProvider::where('code', 'exa')->firstOrFail();
+$p->api_key_encrypted = env('EXA_API_KEY');
+$p->is_active = true;
+$p->save();
+```
+
+The `image_links_per_result` config key (default `5`) caps how many `imageLinks` Exa returns per result and how many candidates the provider emits per Exa result.
 
 ### Firecrawl
 

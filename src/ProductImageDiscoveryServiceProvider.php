@@ -14,6 +14,7 @@ use Padosoft\ProductImageDiscovery\Services\Logging\ProductImageEventLogger;
 use Padosoft\ProductImageDiscovery\Services\Search\BraveSearchProvider;
 use Padosoft\ProductImageDiscovery\Services\Search\CallableSearchProviderFactory;
 use Padosoft\ProductImageDiscovery\Services\Search\DatabaseSearchProviderConfigRepository;
+use Padosoft\ProductImageDiscovery\Services\Search\ExaSearchProvider;
 use Padosoft\ProductImageDiscovery\Services\Search\FakeSearchProvider;
 use Padosoft\ProductImageDiscovery\Services\Search\SearchProviderConfigRepositoryInterface;
 use Padosoft\ProductImageDiscovery\Services\Search\SearchProviderManager;
@@ -47,6 +48,9 @@ final class ProductImageDiscoveryServiceProvider extends ServiceProvider
                     ),
                     'tavily' => new CallableSearchProviderFactory(
                         static fn ($definition): TavilySearchProvider => new TavilySearchProvider($definition),
+                    ),
+                    'exa' => new CallableSearchProviderFactory(
+                        static fn ($definition): ExaSearchProvider => new ExaSearchProvider($definition),
                     ),
                 ],
                 logger: $app->make(ProductImageEventLogger::class),

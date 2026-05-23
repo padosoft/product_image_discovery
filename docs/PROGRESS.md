@@ -202,3 +202,16 @@ In progress. Completed sub-tasks:
 - Skipped tests: sidecar contract (needs `SIDECAR_E2E_URL`) + live AI verifier (Anthropic credits exhausted on the dev account — handled by a new `InsufficientCreditsException` skip in `LiveProductImageAiVerifierTest` so the gate stays green when external quota is depleted).
 - Live Brave + Live Tavily tests both executed against real APIs (keys in `.env`, gitignored).
 - Composer validate strict: PASS via `& 'C:\Users\lopad\.config\herd\bin\php84\php.exe' 'C:\Program Files\Herd\resources\app.asar.unpacked\resources\bin\composer.phar' validate --strict --no-check-publish`.
+
+### PR2 — feat/search-provider-exa (Exa.ai)
+
+In progress. Completed sub-tasks:
+
+- Implemented `src/Services/Search/ExaSearchProvider.php` extending `AbstractHttpSearchProvider`. `POST /search` with `x-api-key` header. Flattens `results[].extras.imageLinks` into one candidate per image URL (deduped, primary `image` prepended). `searchWeb()` falls back to per-result mapping. Site filter via `includeDomains`. Configurable `search_type` (`auto`) and `image_links_per_result` (default 5).
+- Registered `'exa'` driver in `ProductImageDiscoveryServiceProvider`.
+- Seeded `code=exa` (priority=50, disabled).
+- Added `tests/Unit/Search/ExaSearchProviderTest.php` with 5 cases (flatten image links, no image links → empty, 401, site filter → includeDomains, web search normalization).
+- Added `tests/E2E/LiveExaSearchProviderTest.php` (opt-in via `EXA_API_KEY`).
+- Updated `.env.example` with `EXA_API_KEY` + `EXA_URL`. Real key kept only in `.env` (gitignored).
+- Updated `docs/ROADMAP_SEARCH_PROVIDERS.md` (PR1 ✅, PR2 🟡).
+- README "Supported Search Providers" → Exa section: added activation snippet + `image_links_per_result` notes.

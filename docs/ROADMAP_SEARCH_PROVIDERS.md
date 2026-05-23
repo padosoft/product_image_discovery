@@ -23,8 +23,8 @@ Tracker for the multi-PR effort that adds five new search providers (Tavily, Exa
 
 | # | PR | Status | Provider | Driver | Notes |
 |---|---|---|---|---|---|
-| 1 | `feat/search-provider-tavily` | 🟡 | Tavily | `tavily` | Includes foundation: `AbstractHttpSearchProvider`, `ReadsLocalEnv` trait, `.github/workflows/ci.yml`, README revamp (Quick Start + Supported Providers + TOC + Roadmap refresh). |
-| 2 | `feat/search-provider-exa` | ⬜ | Exa.ai | `exa` | `POST /search` + `contents.extras.imageLinks`. Auth via `x-api-key`. |
+| 1 | `feat/search-provider-tavily` | ✅ | Tavily | `tavily` | Includes foundation: `AbstractHttpSearchProvider`, `ReadsLocalEnv` trait, `.github/workflows/ci.yml`, README revamp (Quick Start + Supported Providers + TOC + Roadmap refresh). Merged in PR #3. |
+| 2 | `feat/search-provider-exa` | 🟡 | Exa.ai | `exa` | `POST /search` + `contents.extras.imageLinks`. Auth via `x-api-key`. Flattens N image links per result into N candidates. |
 | 3 | `feat/search-provider-firecrawl` | ⬜ | Firecrawl | `firecrawl` | `POST /v2/search` with `sources:["web","images"]`. Bearer auth. Site filter via `site:` operator in the query. |
 | 4 | `feat/search-provider-websearchapi` | ⬜ | WebSearchAPI.ai | `websearchapi` | `GET /api/v1/search` with `engine=google_images`. Site filter via `site:` operator. |
 | 5 | `feat/search-provider-duckduckgo` | ⬜ | DuckDuckGo | `duckduckgo` | HTML lite `html.duckduckgo.com/html`. Web-only (`supportsImageSearch()=false`). No API key required. Live test skipped in CI. |
