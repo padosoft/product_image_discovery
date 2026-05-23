@@ -298,14 +298,23 @@ $p->save();
 
 ### DuckDuckGo (HTML lite)
 
-Free, no-API-key fallback for web search. Parses `html.duckduckgo.com/html` with `\DOMDocument`. **No image search**: `supportsImageSearch()` returns `false`, so `SearchProviderManager` skips it for image queries automatically.
+Free, no-API-key fallback for web search. Posts to `https://html.duckduckgo.com/html/` and parses the response with `\DOMDocument` + `\DOMXPath`. Result `.result__a` links use the `//duckduckgo.com/l/?uddg=<encoded>` redirect form — the provider decodes them transparently and returns the real destination URL. **No image search**: `supportsImageSearch()` returns `false`, so `SearchProviderManager` skips it for image queries automatically.
 
 ```env
 # Optional override (defaults to https://html.duckduckgo.com):
 DUCKDUCKGO_URL=https://html.duckduckgo.com
 ```
 
-> Implementation lands in PR5 of the [Search Providers roadmap](docs/ROADMAP_SEARCH_PROVIDERS.md). Use it sparingly and respect DuckDuckGo's terms — it is best as a low-volume fallback, not a primary driver.
+Activate:
+
+```php
+$p = \Padosoft\ProductImageDiscovery\Models\ProductImageSearchProvider::where('code', 'duckduckgo')->firstOrFail();
+$p->base_url = 'https://html.duckduckgo.com';
+$p->is_active = true;
+$p->save();
+```
+
+> Use it sparingly and respect DuckDuckGo's terms — it is best as a low-volume fallback, not a primary driver. DuckDuckGo applies anti-bot rate limits to shared/datacenter IPs; the live E2E test self-skips in CI and on 403/429/503 responses.
 
 ### Fake provider
 

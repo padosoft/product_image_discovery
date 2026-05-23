@@ -170,6 +170,22 @@ class ProductImageDiscoveryDefaultsSeeder extends Seeder
                 'is_active' => false,
             ],
             [
+                'code' => 'duckduckgo',
+                'name' => 'DuckDuckGo (HTML lite)',
+                'driver' => 'duckduckgo',
+                'base_url' => 'https://html.duckduckgo.com',
+                'config' => [
+                    'supports_image_search' => false,
+                    'supports_site_filter' => true,
+                    'supports_web_search' => true,
+                    'max_results_per_request' => 30,
+                ],
+                'priority' => 80,
+                'timeout_seconds' => 20,
+                'rate_limit_per_minute' => 20,
+                'is_active' => false,
+            ],
+            [
                 'code' => 'serpapi',
                 'name' => 'SerpAPI',
                 'driver' => 'serpapi',

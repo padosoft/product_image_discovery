@@ -14,6 +14,7 @@ use Padosoft\ProductImageDiscovery\Services\Logging\ProductImageEventLogger;
 use Padosoft\ProductImageDiscovery\Services\Search\BraveSearchProvider;
 use Padosoft\ProductImageDiscovery\Services\Search\CallableSearchProviderFactory;
 use Padosoft\ProductImageDiscovery\Services\Search\DatabaseSearchProviderConfigRepository;
+use Padosoft\ProductImageDiscovery\Services\Search\DuckDuckGoSearchProvider;
 use Padosoft\ProductImageDiscovery\Services\Search\ExaSearchProvider;
 use Padosoft\ProductImageDiscovery\Services\Search\FakeSearchProvider;
 use Padosoft\ProductImageDiscovery\Services\Search\FirecrawlSearchProvider;
@@ -59,6 +60,9 @@ final class ProductImageDiscoveryServiceProvider extends ServiceProvider
                     ),
                     'websearchapi' => new CallableSearchProviderFactory(
                         static fn ($definition): WebSearchApiSearchProvider => new WebSearchApiSearchProvider($definition),
+                    ),
+                    'duckduckgo' => new CallableSearchProviderFactory(
+                        static fn ($definition): DuckDuckGoSearchProvider => new DuckDuckGoSearchProvider($definition),
                     ),
                 ],
                 logger: $app->make(ProductImageEventLogger::class),
