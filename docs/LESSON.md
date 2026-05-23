@@ -84,6 +84,7 @@
 - Exa.ai returns N images per result via `results[].extras.imageLinks` instead of a single top-level images array. The right pattern is 1:N flattening — emit one candidate per image URL while preserving the result's `url` as `page_url` and `title`. Dedupe URLs because the primary `image` field often duplicates the first entry in `extras.imageLinks`.
 - Node `--test-isolation=none` is the stable flag form (Node 24+). Node 22 only exposes `--experimental-test-isolation`. CI Node version must be ≥24 when sidecar scripts use the stable flag, otherwise tests fail with `node: bad option`. The `engines.node` field in `sidecar/package.json` is advisory only — CI runners need an explicit `node-version: '24'` in `actions/setup-node`.
 - `actions/setup-node` with `cache: 'npm'` and `cache-dependency-path` fails hard when the lockfile is missing. For repos without committed lockfiles, drop the cache config and run `npm install` instead of `npm ci`. Don't try to silently fall back inside one job step — the cache plugin errors out before the script runs.
+- Firecrawl v2 `/search` accepts `sources` as an array of objects (`[{type:"web"}, {type:"images"}]`), not bare strings. Sending `["web","images"]` errors out with an unhelpful schema message. Firecrawl also has native `includeDomains`/`excludeDomains` — prefer that to the `site:` operator in the query string for cleaner intent. Default timeout in seeder is 60s because the synchronous /v2/search endpoint can take 20-40s on free tier.
 
 ## Future Session Rules
 

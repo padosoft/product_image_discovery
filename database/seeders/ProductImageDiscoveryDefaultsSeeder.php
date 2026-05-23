@@ -137,6 +137,22 @@ class ProductImageDiscoveryDefaultsSeeder extends Seeder
                 'is_active' => false,
             ],
             [
+                'code' => 'firecrawl',
+                'name' => 'Firecrawl Search',
+                'driver' => 'firecrawl',
+                'base_url' => 'https://api.firecrawl.dev',
+                'config' => [
+                    'supports_image_search' => true,
+                    'supports_site_filter' => true,
+                    'supports_web_search' => true,
+                    'max_results_per_request' => 20,
+                ],
+                'priority' => 60,
+                'timeout_seconds' => 60,
+                'rate_limit_per_minute' => 30,
+                'is_active' => false,
+            ],
+            [
                 'code' => 'serpapi',
                 'name' => 'SerpAPI',
                 'driver' => 'serpapi',

@@ -215,3 +215,22 @@ In progress. Completed sub-tasks:
 - Updated `.env.example` with `EXA_API_KEY` + `EXA_URL`. Real key kept only in `.env` (gitignored).
 - Updated `docs/ROADMAP_SEARCH_PROVIDERS.md` (PR1 ✅, PR2 🟡).
 - README "Supported Search Providers" → Exa section: added activation snippet + `image_links_per_result` notes.
+
+### Verified Gates (PR2, intermediate)
+
+- `vendor/bin/phpunit --testsuite Unit,Feature,E2E` PASS: 85 tests / 347 assertions / 2 skipped.
+- CI green on PR #4 (PHP 8.3 + 8.4 + sidecar Node 24).
+- Live Exa exercised against real API locally.
+- Merged in PR #4 (squash). ROADMAP updated PR2 → ✅.
+
+### PR3 — feat/search-provider-firecrawl (Firecrawl)
+
+In progress. Completed sub-tasks:
+
+- Implemented `src/Services/Search/FirecrawlSearchProvider.php` extending `AbstractHttpSearchProvider`. `POST /v2/search` with `Authorization: Bearer` and body `{query, sources:[{type:"images"}], limit, includeDomains}`. Response parsed via `data.images[]` (imageUrl, imageWidth, imageHeight, source url) and `data.web[]` (title, description, url, metadata).
+- Registered `'firecrawl'` driver in ServiceProvider.
+- Seeded `code=firecrawl` (priority=60, disabled, timeout=60s for the slow synchronous v2/search endpoint, rate_limit=30/min for free tier safety).
+- Added `tests/Unit/Search/FirecrawlSearchProviderTest.php` with 5 cases (parse images, empty `data.images`, 401, site filter → includeDomains + sources, web search mapping).
+- Added `tests/E2E/LiveFirecrawlSearchProviderTest.php` (opt-in via `FIRECRAWL_API_KEY`).
+- Updated `.env.example` with `FIRECRAWL_API_KEY` + `FIRECRAWL_URL`.
+- Updated README + ROADMAP (PR2 ✅, PR3 🟡).
