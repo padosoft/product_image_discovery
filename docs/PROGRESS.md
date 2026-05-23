@@ -253,3 +253,24 @@ In progress. Completed sub-tasks:
 - Added `tests/E2E/LiveWebSearchApiSearchProviderTest.php` (opt-in via `WEBSEARCHAPI_API_KEY`).
 - Updated `.env.example` with `WEBSEARCHAPI_API_KEY` + `WEBSEARCHAPI_URL`.
 - README "Supported Search Providers" table updated: `websearchapi` image search marked ❌ (web-only), site filter via `includeDomains`. Documentation link corrected to `https://websearchapi.ai/docs/search-api`. Per-provider activation snippet added.
+
+### Verified Gates (PR4, intermediate)
+
+- `vendor/bin/phpunit --testsuite Unit,Feature,E2E` PASS: 97 tests / 380 assertions / 2 skipped.
+- CI green on PR #6.
+- Merged in PR #6 (squash). ROADMAP updated PR4 → ✅.
+
+### PR5 — feat/search-provider-duckduckgo (DuckDuckGo HTML lite)
+
+In progress. Completed sub-tasks:
+
+- Implemented `src/Services/Search/DuckDuckGoSearchProvider.php`. POSTs `{q: ...}` form-encoded to `https://html.duckduckgo.com/html/` with a realistic User-Agent. Parses the response with `\DOMDocument::loadHTML` (libxml errors suppressed) + `\DOMXPath`. Iterates `.result` containers, picks `.result__a` (link + title), `.result__snippet` (description), `.result__url` (source domain). `result__a` `href` values are typically `//duckduckgo.com/l/?uddg=<URLENCODED>&rut=...`; the provider extracts and `urldecode`s the `uddg` (or `u`/`url`) param to recover the real destination URL. Falls through to direct `http(s)://` hrefs when present.
+- `supportsImageSearch()` returns `false`; `searchImages()` returns an empty collection. SearchProviderManager skips the driver for image queries automatically (`SearchProviderManager.php:72-75`).
+- Site filter implemented by appending `site:<host>` to the user query (DDG HTML lite has no native domain filter input).
+- Driver `'duckduckgo'` registered in ServiceProvider.
+- Seeded `code=duckduckgo` (priority=80, disabled, rate_limit=20/min for anti-bot safety).
+- Added `tests/Unit/Search/DuckDuckGoSearchProviderTest.php` with 5 cases (image disabled, parse fixture + decode uddg redirect, empty results HTML, site:operator appended to query, HTTP 429 propagates).
+- Added `tests/Unit/Search/fixtures/duckduckgo-html-lite.html` (minimal but realistic DDG HTML containing both `uddg` redirect and direct href cases).
+- Added `tests/E2E/LiveDuckDuckGoSearchProviderTest.php`: opt-out via `CI` env var (skipped on CI), and skips cleanly on 403/429/503 anti-bot responses.
+- Updated `.env.example` with `DUCKDUCKGO_URL` (only override variable; no key needed).
+- README "Supported Search Providers" → DuckDuckGo: activation snippet, anti-bot note. ROADMAP PR4 → ✅, PR5 → 🟡.
