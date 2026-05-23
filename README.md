@@ -185,13 +185,16 @@ You should receive `{"ok":true, "request_id":1, "status":"queued"}`.
 
 ✅ Done — you just ran the full ingest → search → extract → verify → download → quality pipeline locally with a deterministic fake provider. Next steps:
 
-- **Enable a real provider** (Brave, Tavily, Exa.ai, Firecrawl, WebSearchAPI, DuckDuckGo): see [Supported Search Providers](#supported-search-providers) below.
+- **Enable a real provider** (Brave, Tavily, Exa.ai, Firecrawl, WebSearchAPI.ai, DuckDuckGo, SearchAPI.io, You.com): see [Supported Search Providers](#supported-search-providers) below.
 - **Run the live debug flow** with a real product payload: see [Debug Flow Command](#debug-flow-command).
 - **Full host-app walkthrough** with Sanctum scopes and Brave: see [Live Smoke Test From A Fresh Laravel App](#live-smoke-test-from-a-fresh-laravel-app).
 
 ## Supported Search Providers
 
-Out of the box, the package ships with **7 search providers** ready to plug in: 1 deterministic for tests + 6 live drivers covering global, EU-friendly, free-tier, and scrape-friendly options. All providers are stored in `product_image_search_providers` and resolved through a single `SearchProviderManager`, so swapping one for another is a row update.
+> **Since v1.0.0, the search layer is consumed via the standalone composer package [`padosoft/laravel-ai-search-providers`](https://github.com/padosoft/laravel-ai-search-providers).**
+> This repo declares it as a hard dependency in `composer.json`; the package ships every driver listed below, the `SearchProviderInterface` contract, the `SearchProviderManager` orchestrator, the DTOs, the Eloquent model and the create-table migration. `product-image-discovery` only exposes a backwards-compatible `ProductImageSearchProvider` Eloquent subclass that hard-codes the legacy `product_image_search_providers` table, so existing host apps and the sister [`padosoft/product_image_discovery_admin`](https://github.com/padosoft/product_image_discovery_admin) package keep working unchanged. For full driver documentation, the `Http::fake` test pattern, custom-driver extension and the package Quick Start, jump to the package README at <https://github.com/padosoft/laravel-ai-search-providers#readme>.
+
+The package currently bundles **9 search providers** — 1 deterministic for tests + 8 live drivers covering global, EU-friendly, free-tier and scrape-friendly options. All providers are stored in the same `product_image_search_providers` table and resolved through a single `SearchProviderManager`, so swapping one for another is a row update.
 
 | Provider | Driver | Image search | Site filter | Free tier | Docs |
 |---|---|---|---|---|---|
@@ -202,10 +205,10 @@ Out of the box, the package ships with **7 search providers** ready to plug in: 
 | Firecrawl | `firecrawl` | ✅ (`sources:["images"]`) | ✅ (via `site:` operator) | 500 credits / month | <https://docs.firecrawl.dev/api-reference/v2-endpoint/search> |
 | WebSearchAPI.ai | `websearchapi` | ❌ (web-only) | ✅ (`includeDomains`) | Free trial credits | <https://websearchapi.ai/docs/search-api> |
 | DuckDuckGo (HTML lite) | `duckduckgo` | ❌ | ✅ (via `site:` operator) | No key required | <https://duckduckgo.com/html/> |
+| SearchAPI.io | `searchapi` | ✅ (`engine=google_images`) | ✅ (via `site:` operator) | Free trial credits | <https://www.searchapi.io/docs/google-images> |
+| You.com | `youcom` | ❌ (web-only) | ✅ (`include_domains`) | Free trial credits | <https://you.com/docs/api-reference/search/v1-search> |
 
-> Since `product-image-discovery v1.0.0` the search layer (drivers, manager, DTOs, Eloquent model, migration, repository) lives in the standalone composer package [`padosoft/laravel-ai-search-providers`](https://github.com/padosoft/laravel-ai-search-providers). This repo depends on it via `composer require padosoft/laravel-ai-search-providers:^1.0` and exposes a backwards-compatible `ProductImageSearchProvider` Eloquent subclass so existing host apps and the [`padosoft/product_image_discovery_admin`](https://github.com/padosoft/product_image_discovery_admin) sister package keep working unchanged. For full driver documentation, custom-driver extension and the Quick Start, see the package README.
-
-> Templates for `serpapi` and `google_custom_search` are seeded but not yet implemented — see [Roadmap](#roadmap).
+> Templates for `serpapi` and `google_custom_search` were originally seeded but Google's Custom Search JSON API was [closed to new customers in 2026](https://support.google.com/programmable-search/answer/12397162) and new Programmable Search Engines can no longer index the full web — see the [Roadmap](#roadmap) for the Vertex AI Search / Agent Search adapter slated as a separate sub-package.
 
 > ⚠️ Provider configs are redacted in audit logs. Always store secrets in `.env` and let the seeders/tinker scripts populate `api_key_encrypted`, never expose API keys through user-facing endpoints.
 
@@ -317,6 +320,56 @@ $p->save();
 ```
 
 > Use it sparingly and respect DuckDuckGo's terms — it is best as a low-volume fallback, not a primary driver. DuckDuckGo applies anti-bot rate limits to shared/datacenter IPs; the live E2E test self-skips in CI and on 403/429/503 responses.
+
+### SearchAPI.io
+
+Single `GET /api/v1/search` endpoint that switches between `engine=google_images` (image search → `images[]` with `original.link`, `original.{width,height}`, `thumbnail`, `source.{link,name}`) and `engine=google` (web search → `organic_results[]`). Bearer auth. Site filter appended as `site:<host>` operator in the query. Added by [`padosoft/laravel-ai-search-providers v1.2.0`](https://github.com/padosoft/laravel-ai-search-providers/releases/tag/v1.2.0).
+
+```env
+SEARCHAPI_API_KEY=your-key
+SEARCHAPI_URL=https://www.searchapi.io
+```
+
+Activate:
+
+```php
+$p = \Padosoft\ProductImageDiscovery\Models\ProductImageSearchProvider::query()->create([
+    'code' => 'searchapi',
+    'name' => 'SearchAPI.io',
+    'driver' => 'searchapi',
+    'base_url' => 'https://www.searchapi.io',
+    'api_key_encrypted' => env('SEARCHAPI_API_KEY'),
+    'config' => ['country' => 'us', 'language' => 'en'],
+    'priority' => 90,
+    'timeout_seconds' => 30,
+    'is_active' => true,
+]);
+```
+
+### You.com
+
+`GET /v1/search` against `https://ydc-index.io` with `X-API-Key` header. Parses `results.web[]` (and optionally `results.news[]`) with `title`, `url`, `description`, `snippets[]`, `thumbnail_url`, `page_age`, `favicon_url`. Site filter propagated as `include_domains` (comma-separated). **Web-only** as of 2026-05: You.com does not expose a dedicated image-search endpoint, so `supportsImageSearch()` returns `false` and `SearchProviderManager` skips this driver for image queries automatically — `thumbnail_url` is still surfaced per result, and the extraction pipeline can still harvest images from the returned pages. Added by [`padosoft/laravel-ai-search-providers v1.2.0`](https://github.com/padosoft/laravel-ai-search-providers/releases/tag/v1.2.0).
+
+```env
+YOUCOM_API_KEY=your-key
+YOUCOM_URL=https://ydc-index.io
+```
+
+Activate:
+
+```php
+$p = \Padosoft\ProductImageDiscovery\Models\ProductImageSearchProvider::query()->create([
+    'code' => 'youcom',
+    'name' => 'You.com',
+    'driver' => 'youcom',
+    'base_url' => 'https://ydc-index.io',
+    'api_key_encrypted' => env('YOUCOM_API_KEY'),
+    'config' => ['country' => 'US', 'safesearch' => 'moderate'],
+    'priority' => 100,
+    'timeout_seconds' => 30,
+    'is_active' => true,
+]);
+```
 
 ### Fake provider
 
@@ -1240,7 +1293,7 @@ This package stays headless. If you want to integrate a review/configuration exp
 **Recent additions (since v0.1.0):**
 
 - **v1.0.0**: search layer extracted into the standalone package [`padosoft/laravel-ai-search-providers`](https://github.com/padosoft/laravel-ai-search-providers) (Packagist v1.0.x). This repo now depends on it via composer; the existing `ProductImageSearchProvider` Eloquent model is preserved as a thin subclass for BC.
-- 6 live search providers wired through a single `SearchProviderManager`: `brave`, `tavily`, `exa`, `firecrawl`, `websearchapi`, `duckduckgo` (some land progressively across the PRs tracked in [docs/ROADMAP_SEARCH_PROVIDERS.md](docs/ROADMAP_SEARCH_PROVIDERS.md)).
+- 8 live search providers wired through a single `SearchProviderManager`: `brave`, `tavily`, `exa`, `firecrawl`, `websearchapi`, `duckduckgo`, `searchapi`, `youcom`. The drivers are maintained in the standalone [`padosoft/laravel-ai-search-providers`](https://github.com/padosoft/laravel-ai-search-providers) composer package (currently v1.2.x). Historical rollout is tracked in [docs/ROADMAP_SEARCH_PROVIDERS.md](docs/ROADMAP_SEARCH_PROVIDERS.md).
 - Shared `AbstractHttpSearchProvider` so new drivers add ~80 LOC of provider-specific code.
 - GitHub Actions CI for PHP 8.3 / 8.4 + Node sidecar.
 - Junior-friendly [Quick Start](#quick-start-5-minutes-junior-friendly) that brings a fresh Laravel 13 app to a successful API response in 5 minutes without external keys.
