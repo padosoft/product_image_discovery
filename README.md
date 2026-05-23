@@ -262,14 +262,21 @@ The `image_links_per_result` config key (default `5`) caps how many `imageLinks`
 
 ### Firecrawl
 
-`POST /v2/search` with `sources:["web","images"]`. Bearer auth. Site filter is appended as a `site:` operator to the query.
+`POST /v2/search` with `sources:[{type:"images"}]` (or `[{type:"web"}]` for `searchWeb()`). Bearer auth. Site filter propagated as `includeDomains` array. Returns `data.images[]` with `imageUrl`, `imageWidth`, `imageHeight`, and the source page `url`.
 
 ```env
 FIRECRAWL_API_KEY=your-key
 FIRECRAWL_URL=https://api.firecrawl.dev
 ```
 
-> Implementation lands in PR3 of the [Search Providers roadmap](docs/ROADMAP_SEARCH_PROVIDERS.md).
+Activate:
+
+```php
+$p = \Padosoft\ProductImageDiscovery\Models\ProductImageSearchProvider::where('code', 'firecrawl')->firstOrFail();
+$p->api_key_encrypted = env('FIRECRAWL_API_KEY');
+$p->is_active = true;
+$p->save();
+```
 
 ### WebSearchAPI.ai
 
