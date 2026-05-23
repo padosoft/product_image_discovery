@@ -10,19 +10,32 @@ use Padosoft\ProductImageDiscovery\Services\Search\Data\SearchProviderDefinition
 final class DatabaseSearchProviderConfigRepository implements SearchProviderConfigRepositoryInterface
 {
     /**
+     * @param  class-string|null  $providerModel  Override the Eloquent model used as the
+     *         backing store. Useful when the search layer is extracted into
+     *         padosoft/laravel-search-providers and the consumer wants to ship a
+     *         generic SearchProviderConfig model instead of the domain-specific one.
+     */
+    public function __construct(
+        private readonly ?string $providerModel = null,
+    ) {
+    }
+
+    /**
      * @return array<int, SearchProviderDefinition>
      */
     public function getActiveProviders(): array
     {
-        if (! class_exists(ProductImageSearchProvider::class)) {
+        $modelClass = $this->resolveModelClass();
+
+        if ($modelClass === null) {
             return [];
         }
 
-        return ProductImageSearchProvider::query()
+        return $modelClass::query()
             ->active()
             ->ordered()
             ->get()
-            ->map(static function (ProductImageSearchProvider $provider): SearchProviderDefinition {
+            ->map(static function ($provider): SearchProviderDefinition {
                 return SearchProviderDefinition::fromArray([
                     'code' => $provider->code,
                     'name' => $provider->name,
@@ -38,5 +51,29 @@ final class DatabaseSearchProviderConfigRepository implements SearchProviderConf
                 ]);
             })
             ->all();
+    }
+
+    /**
+     * Resolve the model class from constructor override, host-app config or the
+     * package default. Returning null disables the repository gracefully when
+     * neither the override class nor the default model exists (pure unit tests).
+     *
+     * @return class-string|null
+     */
+    private function resolveModelClass(): ?string
+    {
+        if ($this->providerModel !== null && class_exists($this->providerModel)) {
+            return $this->providerModel;
+        }
+
+        if (function_exists('config')) {
+            $configured = config('product-image-discovery.models.search_provider');
+
+            if (is_string($configured) && class_exists($configured)) {
+                return $configured;
+            }
+        }
+
+        return class_exists(ProductImageSearchProvider::class) ? ProductImageSearchProvider::class : null;
     }
 }

@@ -274,3 +274,26 @@ In progress. Completed sub-tasks:
 - Added `tests/E2E/LiveDuckDuckGoSearchProviderTest.php`: opt-out via `CI` env var (skipped on CI), and skips cleanly on 403/429/503 anti-bot responses.
 - Updated `.env.example` with `DUCKDUCKGO_URL` (only override variable; no key needed).
 - README "Supported Search Providers" → DuckDuckGo: activation snippet, anti-bot note. ROADMAP PR4 → ✅, PR5 → 🟡.
+
+### Verified Gates (PR5, final)
+
+- `vendor/bin/phpunit --testsuite Unit,Feature,E2E` PASS: 103 tests / 396 assertions / 2 skipped.
+- CI green on PR #7.
+- Merged in PR #7 (squash). ROADMAP PR5 → ✅. Tag `v0.2.0` cut with full release notes covering all 5 PRs.
+
+### PR #8 — refactor/abstract-search-providers (package-extraction prep)
+
+Goal: make the future extraction to `padosoft/laravel-search-providers` a `git mv` instead of a rewrite, so when `product-pricing-comparison` starts we lift the providers out in one afternoon.
+
+Completed sub-tasks:
+
+- Added `src/Services/Search/Contracts/SearchEventLoggerInterface.php` with a single method `record(string $eventType, array $context = [], string $level = 'info'): mixed`. This is the generic event-logging contract the future package will ship.
+- `ProductImageEventLogger` now implements `SearchEventLoggerInterface` so the existing host-app audit logger satisfies the contract.
+- `SearchProviderManager` constructor depends on `SearchEventLoggerInterface` instead of the concrete `ProductImageEventLogger`. Behavior is unchanged because the existing binding still resolves to the same concrete logger.
+- `DatabaseSearchProviderConfigRepository` now accepts an optional `?string $providerModel` constructor argument and resolves the backing Eloquent model from constructor override → `config('product-image-discovery.models.search_provider')` → package default. Host-app consumers (and the future package) can swap the model with a one-line config change instead of subclassing the repository.
+- Added `docs/PACKAGE_EXTRACTION_READINESS.md`: source of truth for the package boundary. Lists which files are 100% package-ready (move-as-is), which are mostly ready (with configurable indirection), which stay in `product-image-discovery`, and the step-by-step extraction recipe.
+
+Verified Gates (PR #8):
+
+- `vendor/bin/phpunit --testsuite Unit,Feature,E2E` PASS: 103 tests / 396 assertions / 2 skipped (no test count change — pure refactor).
+- Composer validate strict PASS.

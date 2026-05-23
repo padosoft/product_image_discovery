@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Padosoft\ProductImageDiscovery\Services\Logging;
 
-final class ProductImageEventLogger
+use Padosoft\ProductImageDiscovery\Services\Search\Contracts\SearchEventLoggerInterface;
+
+final class ProductImageEventLogger implements SearchEventLoggerInterface
 {
     public function __construct(
         private readonly ?AuditEventStoreInterface $store = null,
@@ -12,6 +14,10 @@ final class ProductImageEventLogger
     ) {
     }
 
+    /**
+     * @param  array<string, mixed>  $context
+     * @return array<string, mixed>
+     */
     public function record(
         string $eventType,
         array $context = [],
