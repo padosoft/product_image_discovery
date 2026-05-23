@@ -94,4 +94,4 @@ This branch makes the extraction a `git mv` instead of a full rewrite:
 
 ## Last update
 
-2026-05-23 — PR #8 (refactor/abstract-search-providers) introduces `SearchEventLoggerInterface` and parameterizes the database repository. Tag `v0.3.0` cuts the refactor.
+2026-05-23 — Extraction complete. The package `padosoft/laravel-ai-search-providers` v1.0.0 is live on [Packagist](https://packagist.org/packages/padosoft/laravel-ai-search-providers) and [GitHub](https://github.com/padosoft/laravel-ai-search-providers). `product-image-discovery v1.0.0` (PR B1) consumes it as a dependency. The recipe in the previous section was followed end-to-end; this document remains as the design rationale and historical reference.

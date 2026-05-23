@@ -27,7 +27,9 @@ Tracker for the multi-PR effort that adds five new search providers (Tavily, Exa
 | 2 | `feat/search-provider-exa` | ✅ | Exa.ai | `exa` | `POST /search` + `contents.extras.imageLinks`. Auth via `x-api-key`. Flattens N image links per result into N candidates. Merged in PR #4. |
 | 3 | `feat/search-provider-firecrawl` | ✅ | Firecrawl | `firecrawl` | `POST /v2/search` with `sources:[{type:"images"}]`. Bearer auth. Site filter via native `includeDomains`. Merged in PR #5. |
 | 4 | `feat/search-provider-websearchapi` | ✅ | WebSearchAPI.ai | `websearchapi` | `POST /ai-search` Bearer auth. **Web-only**: `/ai-search` does not return images, so `supportsImageSearch()=false` and the driver is skipped for image queries. Merged in PR #6. |
-| 5 | `feat/search-provider-duckduckgo` | 🟡 | DuckDuckGo | `duckduckgo` | HTML lite `html.duckduckgo.com/html`. Web-only (`supportsImageSearch()=false`). No API key required. Live test skipped in CI and on 4xx/5xx anti-bot responses. |
+| 5 | `feat/search-provider-duckduckgo` | ✅ | DuckDuckGo | `duckduckgo` | HTML lite `html.duckduckgo.com/html`. Web-only (`supportsImageSearch()=false`). No API key required. Live test skipped in CI and on 4xx/5xx anti-bot responses. |
+
+> **Status (2026-05-23): all 5 search-provider PRs merged, plus the abstraction refactor (PR #8), plus the extraction into a standalone package.** The drivers now live in [`padosoft/laravel-ai-search-providers v1.0.x`](https://github.com/padosoft/laravel-ai-search-providers) on Packagist. New search-driver requests land in that package — open issues at <https://github.com/padosoft/laravel-ai-search-providers/issues>.
 
 ## Per-PR gates
 
