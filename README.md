@@ -200,7 +200,7 @@ Out of the box, the package ships with **7 search providers** ready to plug in: 
 | Tavily | `tavily` | ✅ | ✅ (`include_domains`) | 1000 credits / month | <https://docs.tavily.com> |
 | Exa.ai | `exa` | ✅ (`extras.imageLinks`) | ✅ (`includeDomains`) | Free trial credits | <https://docs.exa.ai> |
 | Firecrawl | `firecrawl` | ✅ (`sources:["images"]`) | ✅ (via `site:` operator) | 500 credits / month | <https://docs.firecrawl.dev/api-reference/v2-endpoint/search> |
-| WebSearchAPI.ai | `websearchapi` | ✅ (`engine=google_images`) | ✅ (via `site:` operator) | Free trial credits | <https://www.websearchapi.ai/docs> |
+| WebSearchAPI.ai | `websearchapi` | ❌ (web-only) | ✅ (`includeDomains`) | Free trial credits | <https://websearchapi.ai/docs/search-api> |
 | DuckDuckGo (HTML lite) | `duckduckgo` | ❌ | ✅ (via `site:` operator) | No key required | <https://duckduckgo.com/html/> |
 
 > Templates for `serpapi` and `google_custom_search` are seeded but not yet implemented — see [Roadmap](#roadmap).
@@ -280,14 +280,21 @@ $p->save();
 
 ### WebSearchAPI.ai
 
-`GET /api/v1/search?engine=google_images` for images, `engine=google` for web. Auth via `apikey` query param.
+`POST /ai-search` with Bearer auth. Google-backed organic web results with optional AI content extraction. Site filter via `includeDomains`. **Web-only**: WebSearchAPI does not expose a dedicated image search endpoint, so `supportsImageSearch()` returns `false` and `SearchProviderManager` skips this driver for image queries (the extraction pipeline can still harvest images from the returned pages).
 
 ```env
 WEBSEARCHAPI_API_KEY=your-key
-WEBSEARCHAPI_URL=https://www.websearchapi.ai
+WEBSEARCHAPI_URL=https://api.websearchapi.ai
 ```
 
-> Implementation lands in PR4 of the [Search Providers roadmap](docs/ROADMAP_SEARCH_PROVIDERS.md).
+Activate:
+
+```php
+$p = \Padosoft\ProductImageDiscovery\Models\ProductImageSearchProvider::where('code', 'websearchapi')->firstOrFail();
+$p->api_key_encrypted = env('WEBSEARCHAPI_API_KEY');
+$p->is_active = true;
+$p->save();
+```
 
 ### DuckDuckGo (HTML lite)
 

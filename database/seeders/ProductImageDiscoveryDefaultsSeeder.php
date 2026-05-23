@@ -153,6 +153,23 @@ class ProductImageDiscoveryDefaultsSeeder extends Seeder
                 'is_active' => false,
             ],
             [
+                'code' => 'websearchapi',
+                'name' => 'WebSearchAPI.ai',
+                'driver' => 'websearchapi',
+                'base_url' => 'https://api.websearchapi.ai',
+                'config' => [
+                    'supports_image_search' => false,
+                    'supports_site_filter' => true,
+                    'supports_web_search' => true,
+                    'max_results_per_request' => 20,
+                    'include_content' => false,
+                ],
+                'priority' => 70,
+                'timeout_seconds' => 30,
+                'rate_limit_per_minute' => 60,
+                'is_active' => false,
+            ],
+            [
                 'code' => 'serpapi',
                 'name' => 'SerpAPI',
                 'driver' => 'serpapi',

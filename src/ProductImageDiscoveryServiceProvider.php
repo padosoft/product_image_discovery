@@ -20,6 +20,7 @@ use Padosoft\ProductImageDiscovery\Services\Search\FirecrawlSearchProvider;
 use Padosoft\ProductImageDiscovery\Services\Search\SearchProviderConfigRepositoryInterface;
 use Padosoft\ProductImageDiscovery\Services\Search\SearchProviderManager;
 use Padosoft\ProductImageDiscovery\Services\Search\TavilySearchProvider;
+use Padosoft\ProductImageDiscovery\Services\Search\WebSearchApiSearchProvider;
 use Padosoft\ProductImageDiscovery\Services\Storage\EloquentPipelineStore;
 
 final class ProductImageDiscoveryServiceProvider extends ServiceProvider
@@ -55,6 +56,9 @@ final class ProductImageDiscoveryServiceProvider extends ServiceProvider
                     ),
                     'firecrawl' => new CallableSearchProviderFactory(
                         static fn ($definition): FirecrawlSearchProvider => new FirecrawlSearchProvider($definition),
+                    ),
+                    'websearchapi' => new CallableSearchProviderFactory(
+                        static fn ($definition): WebSearchApiSearchProvider => new WebSearchApiSearchProvider($definition),
                     ),
                 ],
                 logger: $app->make(ProductImageEventLogger::class),

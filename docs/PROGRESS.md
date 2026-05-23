@@ -234,3 +234,22 @@ In progress. Completed sub-tasks:
 - Added `tests/E2E/LiveFirecrawlSearchProviderTest.php` (opt-in via `FIRECRAWL_API_KEY`).
 - Updated `.env.example` with `FIRECRAWL_API_KEY` + `FIRECRAWL_URL`.
 - Updated README + ROADMAP (PR2 ✅, PR3 🟡).
+
+### Verified Gates (PR3, intermediate)
+
+- `vendor/bin/phpunit --testsuite Unit,Feature,E2E` PASS: 91 tests / 364 assertions / 2 skipped.
+- CI green on PR #5 (PHP 8.3 + 8.4 + sidecar Node 24).
+- Merged in PR #5 (squash). ROADMAP updated PR3 → ✅.
+
+### PR4 — feat/search-provider-websearchapi (WebSearchAPI.ai)
+
+In progress. Completed sub-tasks:
+
+- Discovered through `/docs/search-api` that WebSearchAPI.ai only exposes Google-backed organic web results via `POST /ai-search`; there is no dedicated image search endpoint. Decision: implement the driver as `supportsImageSearch()=false` (web-only) like DuckDuckGo. `SearchProviderManager` skips it for image queries; pipeline extraction still harvests images from the returned page URLs.
+- Implemented `src/Services/Search/WebSearchApiSearchProvider.php`. `POST /ai-search` with `Authorization: Bearer`. Body: `{query, maxResults, includeContent, country, language, includeDomains}`. Response parsed from `organic[]` with title/url/description/content/position/score.
+- Registered `'websearchapi'` driver in ServiceProvider.
+- Seeded `code=websearchapi` (priority=70, disabled, supports_image_search=false explicit in config).
+- Added `tests/Unit/Search/WebSearchApiSearchProviderTest.php` with 5 cases (supportsImageSearch=false + searchImages empty, web search parsing, web search empty when no organic, 401, site filter → includeDomains).
+- Added `tests/E2E/LiveWebSearchApiSearchProviderTest.php` (opt-in via `WEBSEARCHAPI_API_KEY`).
+- Updated `.env.example` with `WEBSEARCHAPI_API_KEY` + `WEBSEARCHAPI_URL`.
+- README "Supported Search Providers" table updated: `websearchapi` image search marked ❌ (web-only), site filter via `includeDomains`. Documentation link corrected to `https://websearchapi.ai/docs/search-api`. Per-provider activation snippet added.
