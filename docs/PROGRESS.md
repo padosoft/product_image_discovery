@@ -324,3 +324,14 @@ Branch `refactor/depend-on-ai-search-providers`.
 - `vendor/bin/phpunit --testsuite Unit,Feature,E2E` PASS: 69 tests, 294 assertions, 2 skipped. Baseline before extraction was 103 / 396 / 2; the 34 dropped tests + 102 assertions moved to the package's own suite.
 - `composer validate --strict --no-check-publish`: PASS.
 - Live AI verifier test still gracefully skips on insufficient credits.
+- CI green on PHP 8.3 + 8.4 + sidecar Node 24 (PR #9 merged).
+
+### PR B2 — chore: tag v1.0.0 release post-extraction
+
+Docs-only PR. Updates:
+- README "Supported Search Providers" section: added a callout that the search layer now lives in the standalone `padosoft/laravel-ai-search-providers` package since v1.0.0; full driver docs link to the package README.
+- Roadmap section: added a v1.0.0 bullet at the top of "Recent additions" noting the extraction.
+- `docs/PACKAGE_EXTRACTION_READINESS.md`: marked the extraction as complete and pointed the "Last update" section at the live package on Packagist.
+- `docs/ROADMAP_SEARCH_PROVIDERS.md`: PR5 → ✅ and final note redirecting new driver requests to the package's issue tracker.
+
+After merge: tag `v1.0.0` and `gh release create v1.0.0`.

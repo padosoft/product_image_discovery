@@ -203,6 +203,8 @@ Out of the box, the package ships with **7 search providers** ready to plug in: 
 | WebSearchAPI.ai | `websearchapi` | ❌ (web-only) | ✅ (`includeDomains`) | Free trial credits | <https://websearchapi.ai/docs/search-api> |
 | DuckDuckGo (HTML lite) | `duckduckgo` | ❌ | ✅ (via `site:` operator) | No key required | <https://duckduckgo.com/html/> |
 
+> Since `product-image-discovery v1.0.0` the search layer (drivers, manager, DTOs, Eloquent model, migration, repository) lives in the standalone composer package [`padosoft/laravel-ai-search-providers`](https://github.com/padosoft/laravel-ai-search-providers). This repo depends on it via `composer require padosoft/laravel-ai-search-providers:^1.0` and exposes a backwards-compatible `ProductImageSearchProvider` Eloquent subclass so existing host apps and the [`padosoft/product_image_discovery_admin`](https://github.com/padosoft/product_image_discovery_admin) sister package keep working unchanged. For full driver documentation, custom-driver extension and the Quick Start, see the package README.
+
 > Templates for `serpapi` and `google_custom_search` are seeded but not yet implemented — see [Roadmap](#roadmap).
 
 > ⚠️ Provider configs are redacted in audit logs. Always store secrets in `.env` and let the seeders/tinker scripts populate `api_key_encrypted`, never expose API keys through user-facing endpoints.
@@ -1237,6 +1239,7 @@ This package stays headless. If you want to integrate a review/configuration exp
 
 **Recent additions (since v0.1.0):**
 
+- **v1.0.0**: search layer extracted into the standalone package [`padosoft/laravel-ai-search-providers`](https://github.com/padosoft/laravel-ai-search-providers) (Packagist v1.0.x). This repo now depends on it via composer; the existing `ProductImageSearchProvider` Eloquent model is preserved as a thin subclass for BC.
 - 6 live search providers wired through a single `SearchProviderManager`: `brave`, `tavily`, `exa`, `firecrawl`, `websearchapi`, `duckduckgo` (some land progressively across the PRs tracked in [docs/ROADMAP_SEARCH_PROVIDERS.md](docs/ROADMAP_SEARCH_PROVIDERS.md)).
 - Shared `AbstractHttpSearchProvider` so new drivers add ~80 LOC of provider-specific code.
 - GitHub Actions CI for PHP 8.3 / 8.4 + Node sidecar.
