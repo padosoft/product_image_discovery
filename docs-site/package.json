@@ -1,0 +1,16 @@
+{
+  "name": "product-image-discovery-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npm exec --yes --package @docmd/core@0.8.6 -- docmd dev",
+    "build": "npm exec --yes --package @docmd/core@0.8.6 -- docmd build",
+    "check": "node scripts/check-no-raw-html.mjs"
+  },
+  "dependencies": {
+    "@docmd/core": "^0.8.6",
+    "@huggingface/transformers": "^4.2.0",
+    "docmd-search": "0.1.0-alpha.1",
+    "onnxruntime-node": "^1.27.0"
+  }
+}

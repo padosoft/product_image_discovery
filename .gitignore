@@ -1,4 +1,8 @@
 /vendor/
+.docmd-search/*
+!.docmd-search/config.json
+node_modules/
+_site/
 /node_modules/
 /.phpunit.cache/
 /coverage/

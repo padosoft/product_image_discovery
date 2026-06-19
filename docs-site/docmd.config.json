@@ -1,0 +1,229 @@
+{
+  "title": "product_image_discovery",
+  "description": "Laravel package for conservative product image discovery, verification, scoring, download, and manual review workflows.",
+  "url": "https://doc.product-image-discovery.padosoft.com",
+  "src": "docs",
+  "out": "_site",
+  "base": "/",
+  "favicon": "assets/favicon.svg",
+  "copyCode": true,
+  "pageNavigation": true,
+  "minify": true,
+  "theme": {
+    "name": "default",
+    "appearance": "system",
+    "primaryColor": "#0d9488",
+    "customCss": [
+      "assets/custom.css"
+    ]
+  },
+  "layout": {
+    "spa": true,
+    "header": {
+      "enabled": true
+    },
+    "sidebar": {
+      "enabled": true,
+      "collapsible": true,
+      "defaultCollapsed": false
+    },
+    "footer": {
+      "style": "minimal",
+      "branding": false,
+      "content": "Apache-2.0 licensed. Built by Padosoft."
+    },
+    "menubar": {
+      "enabled": true,
+      "left": [
+        {
+          "title": "Docs",
+          "path": "/"
+        },
+        {
+          "title": "GitHub",
+          "url": "https://github.com/padosoft/product_image_discovery"
+        }
+      ],
+      "right": [
+        {
+          "title": "Packagist",
+          "url": "https://packagist.org/packages/padosoft/product-image-discovery"
+        }
+      ]
+    }
+  },
+  "footer": {
+    "style": "minimal",
+    "branding": false,
+    "content": "Apache-2.0 licensed. Built by Padosoft."
+  },
+  "navigation": [
+    {
+      "title": "Get Started",
+      "collapsible": true,
+      "children": [
+        {
+          "title": "Overview",
+          "path": "/"
+        },
+        {
+          "title": "Quickstart",
+          "path": "/get-started/quickstart/"
+        },
+        {
+          "title": "Installation",
+          "path": "/get-started/installation/"
+        },
+        {
+          "title": "Configuration",
+          "path": "/get-started/configuration/"
+        }
+      ]
+    },
+    {
+      "title": "Guides",
+      "collapsible": true,
+      "children": [
+        {
+          "title": "Pipeline Workflow",
+          "path": "/guides/pipeline-workflow/"
+        },
+        {
+          "title": "Worked Example",
+          "path": "/guides/worked-example/"
+        },
+        {
+          "title": "Trusted Sources",
+          "path": "/guides/trusted-sources/"
+        },
+        {
+          "title": "AI And Vision",
+          "path": "/guides/ai-and-vision/"
+        },
+        {
+          "title": "Sidecar Browser",
+          "path": "/guides/sidecar-browser/"
+        }
+      ]
+    },
+    {
+      "title": "Concetti & Teoria",
+      "collapsible": true,
+      "children": [
+        {
+          "title": "Motivazione",
+          "path": "/concepts/motivation/"
+        },
+        {
+          "title": "Teoria",
+          "path": "/concepts/theory/"
+        },
+        {
+          "title": "Design",
+          "path": "/concepts/design/"
+        },
+        {
+          "title": "Modello Dati",
+          "path": "/concepts/data-model/"
+        },
+        {
+          "title": "Gotchas And Limits",
+          "path": "/concepts/gotchas-limits/"
+        }
+      ]
+    },
+    {
+      "title": "Architettura",
+      "collapsible": true,
+      "children": [
+        {
+          "title": "Architecture Overview",
+          "path": "/architecture/overview/"
+        },
+        {
+          "title": "Components",
+          "path": "/architecture/components/"
+        },
+        {
+          "title": "Decision Records",
+          "path": "/architecture/adr/"
+        }
+      ]
+    },
+    {
+      "title": "Best Practices",
+      "collapsible": true,
+      "children": [
+        {
+          "title": "False Positive Control",
+          "path": "/best-practices/false-positive-control/"
+        },
+        {
+          "title": "Provider Hygiene",
+          "path": "/best-practices/provider-hygiene/"
+        },
+        {
+          "title": "Review UX",
+          "path": "/best-practices/review-ux/"
+        }
+      ]
+    },
+    {
+      "title": "Operations",
+      "collapsible": true,
+      "children": [
+        {
+          "title": "Runbooks",
+          "path": "/operations/runbooks/"
+        },
+        {
+          "title": "Observability",
+          "path": "/operations/observability/"
+        },
+        {
+          "title": "Security",
+          "path": "/operations/security/"
+        }
+      ]
+    },
+    {
+      "title": "Reference",
+      "collapsible": true,
+      "children": [
+        {
+          "title": "CLI",
+          "path": "/reference/cli/"
+        },
+        {
+          "title": "API",
+          "path": "/reference/api/"
+        },
+        {
+          "title": "PHP API",
+          "path": "/reference/php-api/"
+        },
+        {
+          "title": "Configuration Keys",
+          "path": "/reference/configuration-keys/"
+        },
+        {
+          "title": "Database Tables",
+          "path": "/reference/database-tables/"
+        }
+      ]
+    }
+  ],
+  "plugins": {
+    "search": {
+      "semantic": true,
+      "indexDir": ".docmd-search"
+    },
+    "git": true,
+    "seo": true,
+    "sitemap": true,
+    "mermaid": true,
+    "math": true,
+    "llms": true,
+    "analytics": false
+  }
+}

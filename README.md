@@ -8,6 +8,8 @@
 
 ![Product Image Discovery banner](resources/banner.png)
 
+Official documentation: <https://doc.product-image-discovery.padosoft.com>
+
 ## Table of Contents
 
 - [Responsible Use Disclaimer](#responsible-use-disclaimer)
