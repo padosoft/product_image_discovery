@@ -26,4 +26,18 @@ interface PipelineStoreInterface
     public function updateCandidate(int|string $candidateId, array $attributes): array;
 
     public function upsertSourcePage(int|string $clientId, string $url, array $attributes = []): array;
+
+    /**
+     * Active trusted sources for the client, including global (client-less) entries.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function listTrustedSources(int|string|null $clientId): array;
+
+    /**
+     * Active settings for the client as a key => value map; client-specific values win over global ones.
+     *
+     * @return array<string, mixed>
+     */
+    public function getSettings(int|string|null $clientId): array;
 }

@@ -29,6 +29,16 @@ final class InMemoryPipelineStore implements PipelineStoreInterface, AuditEventS
      */
     public array $events = [];
 
+    /**
+     * @var array<int, array<string, mixed>>
+     */
+    public array $trustedSources = [];
+
+    /**
+     * @var array<string, mixed>
+     */
+    public array $settings = [];
+
     private int $requestSequence = 0;
 
     private int $candidateSequence = 0;
@@ -142,6 +152,20 @@ final class InMemoryPipelineStore implements PipelineStoreInterface, AuditEventS
         $this->sourcePages[$key] = $record;
 
         return $record;
+    }
+
+    public function listTrustedSources(int|string|null $clientId): array
+    {
+        return array_values(array_filter(
+            $this->trustedSources,
+            static fn (array $source): bool => ($source['is_active'] ?? true) !== false
+                && (($source['client_id'] ?? null) === null || ($clientId !== null && (int) $source['client_id'] === (int) $clientId)),
+        ));
+    }
+
+    public function getSettings(int|string|null $clientId): array
+    {
+        return $this->settings;
     }
 
     public function storeAuditEvent(array $event): void

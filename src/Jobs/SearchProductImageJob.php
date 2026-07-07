@@ -55,7 +55,8 @@ final class SearchProductImageJob implements ShouldQueue
         $identity = ProductIdentityData::fromArray(array_merge($request, [
             'raw_payload' => $request['raw_payload'] ?? $request,
         ]));
-        $searchQueries = ($queryGenerator ?? new GenerateSearchQueriesAction())->handle($identity);
+        $trustedSources = $store->listTrustedSources($request['client_id'] ?? null);
+        $searchQueries = ($queryGenerator ?? new GenerateSearchQueriesAction())->handle($identity, $trustedSources);
 
         if ($searchQueries === []) {
             $searchQueries = [
