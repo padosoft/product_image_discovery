@@ -5,6 +5,11 @@ declare(strict_types=1);
 namespace Tests\Feature\Api;
 
 use Illuminate\Support\Facades\Crypt;
+use Padosoft\LaravelAiSearchProviders\CallableSearchProviderFactory;
+use Padosoft\LaravelAiSearchProviders\Data\SearchProviderDefinition;
+use Padosoft\LaravelAiSearchProviders\Providers\FakeSearchProvider;
+use Padosoft\LaravelAiSearchProviders\SearchProviderManager;
+use Padosoft\ProductImageDiscovery\Tests\Support\InMemorySearchProviderConfigRepository;
 use Tests\Feature\Api\Fixtures\FakeProductImageDiscoverySearchProvider;
 use Tests\Feature\Api\Fixtures\FakeProductImageDiscoverySetting;
 use Tests\Feature\Api\Fixtures\FakeProductImageTrustedSource;
@@ -62,6 +67,35 @@ final class ConfigApiTest extends ApiTestCase
             'trust_score' => 120,
         ])->assertUnprocessable()
             ->assertJsonValidationErrors(['domain', 'trust_score']);
+    }
+
+    public function test_search_providers_reject_non_registered_driver(): void
+    {
+        $this->app->singleton(SearchProviderManager::class, static fn (): SearchProviderManager => new SearchProviderManager(
+            repository: new InMemorySearchProviderConfigRepository([]),
+            factories: [
+                'brave' => new CallableSearchProviderFactory(
+                    static fn (SearchProviderDefinition $definition): FakeSearchProvider => FakeSearchProvider::fromDefinition($definition),
+                ),
+            ],
+        ));
+
+        $this->authenticate(['admin']);
+
+        $this->postJson('/api/product-image-discovery/search-providers', [
+            'code' => 'serpapi',
+            'name' => 'SerpApi',
+            'driver' => 'serpapi',
+            'base_url' => 'https://serpapi.com',
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['driver']);
+
+        $this->postJson('/api/product-image-discovery/search-providers', [
+            'code' => 'brave',
+            'name' => 'Brave Search',
+            'driver' => 'brave',
+            'base_url' => 'https://api.search.brave.com',
+        ])->assertCreated();
     }
 
     public function test_trusted_sources_and_search_providers_crud_happy_path_without_exposing_secrets(): void
