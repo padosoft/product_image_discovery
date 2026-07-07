@@ -156,10 +156,12 @@ final class InMemoryPipelineStore implements PipelineStoreInterface, AuditEventS
 
     public function listTrustedSources(int|string|null $clientId): array
     {
+        $normalizedClientId = $this->normalizeClientId($clientId);
+
         return array_values(array_filter(
             $this->trustedSources,
             static fn (array $source): bool => ($source['is_active'] ?? true) !== false
-                && (($source['client_id'] ?? null) === null || ($clientId !== null && (int) $source['client_id'] === (int) $clientId)),
+                && (($source['client_id'] ?? null) === null || ($normalizedClientId !== null && (int) $source['client_id'] === $normalizedClientId)),
         ));
     }
 
@@ -171,6 +173,15 @@ final class InMemoryPipelineStore implements PipelineStoreInterface, AuditEventS
     public function storeAuditEvent(array $event): void
     {
         $this->events[] = $event;
+    }
+
+    private function normalizeClientId(int|string|null $clientId): ?int
+    {
+        if ($clientId === null || $clientId === '' || $clientId === 'global') {
+            return null;
+        }
+
+        return (int) $clientId;
     }
 
     private function requestKey(array $identity): string
