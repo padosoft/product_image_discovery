@@ -37,8 +37,12 @@ final class UpsertProductImageSearchProviderRequest extends ProductImageDiscover
 
     public function messages(): array
     {
+        $registeredDrivers = $this->registeredDrivers();
+
         return [
-            'driver.in' => 'The selected driver is not registered. Registered drivers: ' . implode(', ', $this->registeredDrivers()) . '.',
+            'driver.in' => $registeredDrivers === []
+                ? 'The selected driver is not registered.'
+                : 'The selected driver is not registered. Registered drivers: ' . implode(', ', $registeredDrivers) . '.',
         ];
     }
 
