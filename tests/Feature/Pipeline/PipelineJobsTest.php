@@ -204,6 +204,104 @@ final class PipelineJobsTest extends TestCase
         self::assertSame('brand.example.test', $siteQueries[0]['site_domain'] ?? $siteQueries[0]['siteDomain'] ?? null);
     }
 
+    public function test_search_job_discards_ean_results_that_do_not_mention_the_ean(): void
+    {
+        $store = new InMemoryPipelineStore();
+        $logger = new ProductImageEventLogger($store);
+        $searchManager = new SearchProviderManager(
+            repository: new InMemorySearchProviderConfigRepository([
+                SearchProviderDefinition::fromArray([
+                    'code' => 'fake',
+                    'name' => 'Fake',
+                    'driver' => 'fake',
+                    'priority' => 10,
+                    'config' => [
+                        'image_results' => [[
+                            'title' => 'Unrelated category page',
+                            'page_url' => 'https://marketplace.example.test/category/shoes',
+                            'image_url' => 'https://marketplace.example.test/banner.jpg',
+                            'source_domain' => 'marketplace.example.test',
+                        ]],
+                    ],
+                ]),
+            ]),
+            factories: [
+                'fake' => new CallableSearchProviderFactory(
+                    static fn (SearchProviderDefinition $definition): FakeSearchProvider => FakeSearchProvider::fromDefinition($definition),
+                ),
+            ],
+        );
+
+        $request = (new IngestProductImageDiscoveryJob([
+            'client_id' => 11,
+            'erp_model_color_id' => 'MODEL-RED',
+            'brand' => 'Brand',
+            'model_code' => 'Model',
+            'color_name' => 'Red',
+            'ean' => '8056713248026',
+        ]))->handle($store, $logger);
+
+        (new SearchProductImageJob($request['id']))->handle($store, $searchManager, $logger);
+
+        $search = $store->getRequest($request['id'])['context']['search'];
+        $executions = $search['executions'];
+
+        self::assertSame('ean', $executions[0]['search_query']['intent']);
+        self::assertSame(1, $executions[0]['discarded_results']);
+        self::assertSame([], $executions[0]['execution']['results']);
+        self::assertGreaterThan(1, count($executions));
+        self::assertNotSame('ean', $executions[count($executions) - 1]['search_query']['intent']);
+        self::assertNotEmpty($search['execution']['results']);
+        self::assertSame('candidates_found', $store->getRequest($request['id'])['status']);
+    }
+
+    public function test_search_job_keeps_ean_results_that_mention_the_ean(): void
+    {
+        $store = new InMemoryPipelineStore();
+        $logger = new ProductImageEventLogger($store);
+        $searchManager = new SearchProviderManager(
+            repository: new InMemorySearchProviderConfigRepository([
+                SearchProviderDefinition::fromArray([
+                    'code' => 'fake',
+                    'name' => 'Fake',
+                    'driver' => 'fake',
+                    'priority' => 10,
+                    'config' => [
+                        'image_results' => [[
+                            'title' => 'Brand Model Red EAN 8056713248026',
+                            'page_url' => 'https://shop.example.test/p/8056713248026',
+                            'image_url' => 'https://shop.example.test/p/1.jpg',
+                            'source_domain' => 'shop.example.test',
+                        ]],
+                    ],
+                ]),
+            ]),
+            factories: [
+                'fake' => new CallableSearchProviderFactory(
+                    static fn (SearchProviderDefinition $definition): FakeSearchProvider => FakeSearchProvider::fromDefinition($definition),
+                ),
+            ],
+        );
+
+        $request = (new IngestProductImageDiscoveryJob([
+            'client_id' => 11,
+            'erp_model_color_id' => 'MODEL-RED',
+            'brand' => 'Brand',
+            'model_code' => 'Model',
+            'color_name' => 'Red',
+            'ean' => '8056713248026',
+        ]))->handle($store, $logger);
+
+        (new SearchProductImageJob($request['id']))->handle($store, $searchManager, $logger);
+
+        $executions = $store->getRequest($request['id'])['context']['search']['executions'];
+
+        self::assertCount(1, $executions);
+        self::assertSame('ean', $executions[0]['search_query']['intent']);
+        self::assertSame(0, $executions[0]['discarded_results']);
+        self::assertNotEmpty($executions[0]['execution']['results']);
+    }
+
     public function test_verify_job_scores_candidate_from_trusted_source_without_penalty(): void
     {
         $store = new InMemoryPipelineStore();
