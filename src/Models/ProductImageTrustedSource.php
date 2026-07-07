@@ -60,6 +60,17 @@ class ProductImageTrustedSource extends Model
         return $query->when($clientId !== null, fn (Builder $builder) => $builder->where('client_id', $clientId));
     }
 
+    public function scopeForClientOrGlobal(Builder $query, ?int $clientId): Builder
+    {
+        return $query->when(
+            $clientId !== null,
+            fn (Builder $builder) => $builder->where(static function (Builder $nested) use ($clientId): void {
+                $nested->where('client_id', $clientId)->orWhereNull('client_id');
+            }),
+            fn (Builder $builder) => $builder->whereNull('client_id'),
+        );
+    }
+
     public function scopeForDomain(Builder $query, string $domain): Builder
     {
         return $query->where('domain', $domain);

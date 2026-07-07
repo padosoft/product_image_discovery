@@ -8,7 +8,9 @@ use Illuminate\Support\Arr;
 use Padosoft\ProductImageDiscovery\Jobs\Contracts\PipelineStoreInterface;
 use Padosoft\ProductImageDiscovery\Models\ProductImageDiscoveryCandidate;
 use Padosoft\ProductImageDiscovery\Models\ProductImageDiscoveryRequest;
+use Padosoft\ProductImageDiscovery\Models\ProductImageDiscoverySetting;
 use Padosoft\ProductImageDiscovery\Models\ProductImageDiscoverySourcePage;
+use Padosoft\ProductImageDiscovery\Models\ProductImageTrustedSource;
 
 final class EloquentPipelineStore implements PipelineStoreInterface
 {
@@ -129,6 +131,37 @@ final class EloquentPipelineStore implements PipelineStoreInterface
         $sourcePage->save();
 
         return $sourcePage->refresh()->toArray();
+    }
+
+    public function listTrustedSources(int|string|null $clientId): array
+    {
+        return ProductImageTrustedSource::query()
+            ->active()
+            ->forClientOrGlobal($this->normalizeClientId($clientId))
+            ->orderByDesc('trust_score')
+            ->get()
+            ->map(static fn (ProductImageTrustedSource $source): array => $source->toArray())
+            ->all();
+    }
+
+    public function getSettings(int|string|null $clientId): array
+    {
+        $settings = [];
+
+        $rows = ProductImageDiscoverySetting::query()
+            ->active()
+            ->forClientOrGlobal($this->normalizeClientId($clientId))
+            ->get();
+
+        foreach ($rows as $row) {
+            $key = (string) $row->getAttribute('setting_key');
+
+            if (! array_key_exists($key, $settings)) {
+                $settings[$key] = $row->setting_value;
+            }
+        }
+
+        return $settings;
     }
 
     private function requestToArray(ProductImageDiscoveryRequest $request): array

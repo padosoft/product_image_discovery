@@ -20,6 +20,7 @@ use Padosoft\ProductImageDiscovery\Jobs\Concerns\ResolvesQueueName;
 use Padosoft\ProductImageDiscovery\Jobs\Contracts\PipelineStoreInterface;
 use Padosoft\ProductImageDiscovery\Services\Ai\ProductImageAiVerifier;
 use Padosoft\ProductImageDiscovery\Services\Logging\ProductImageEventLogger;
+use Padosoft\ProductImageDiscovery\Services\Support\TrustedSourceMatcher;
 
 final class VerifyCandidateImageJob implements ShouldQueue
 {
@@ -92,11 +93,18 @@ final class VerifyCandidateImageJob implements ShouldQueue
             'ai_analysis' => $aiAnalysis,
         ]);
 
+        $trustedSource = TrustedSourceMatcher::match(
+            $store->listTrustedSources($request['client_id'] ?? null),
+            $candidate['source_domain'] ?? $candidate['source_page_url'] ?? null,
+        );
+
         $score = ($scorer ?? new ScoreCandidateImageAction())->handle(
             ProductIdentityData::fromArray(array_merge($request, [
                 'raw_payload' => $request['raw_payload'] ?? $request,
             ])),
             CandidateImageData::fromArray($candidateForScoring),
+            $trustedSource,
+            $store->getSettings($request['client_id'] ?? null),
         );
 
         $candidateStatus = match ($score->status) {
