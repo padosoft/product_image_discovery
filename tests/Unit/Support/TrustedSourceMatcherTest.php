@@ -31,6 +31,15 @@ final class TrustedSourceMatcherTest extends TestCase
         self::assertSame($specific, TrustedSourceMatcher::match([$generic, $specific], 'shop.brand.example.test'));
     }
 
+    public function test_it_prefers_client_specific_source_over_global_on_same_domain(): void
+    {
+        $global = ['domain' => 'brand.example.test', 'trust_score' => 60, 'client_id' => null];
+        $clientSpecific = ['domain' => 'brand.example.test', 'trust_score' => 92, 'client_id' => 7];
+
+        self::assertSame($clientSpecific, TrustedSourceMatcher::match([$global, $clientSpecific], 'brand.example.test'));
+        self::assertSame($clientSpecific, TrustedSourceMatcher::match([$clientSpecific, $global], 'brand.example.test'));
+    }
+
     public function test_it_ignores_inactive_sources(): void
     {
         $source = ['domain' => 'brand.example.test', 'trust_score' => 92, 'is_active' => false];

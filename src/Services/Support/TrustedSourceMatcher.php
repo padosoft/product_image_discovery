@@ -8,7 +8,8 @@ final class TrustedSourceMatcher
 {
     /**
      * Pick the trusted source matching the candidate domain (exact or subdomain match).
-     * When multiple sources match, the most specific (longest) domain wins.
+     * When multiple sources match, the most specific (longest) domain wins; on equal
+     * domains a client-specific source wins over a global (client-less) one.
      *
      * @param array<int, array<string, mixed>> $trustedSources
      * @return array<string, mixed>
@@ -23,6 +24,7 @@ final class TrustedSourceMatcher
 
         $best = [];
         $bestLength = 0;
+        $bestIsClientSpecific = false;
 
         foreach ($trustedSources as $trustedSource) {
             if (($trustedSource['is_active'] ?? true) === false) {
@@ -40,10 +42,12 @@ final class TrustedSourceMatcher
             }
 
             $length = strlen($trustedDomain);
+            $isClientSpecific = ($trustedSource['client_id'] ?? null) !== null;
 
-            if ($length > $bestLength) {
+            if ($length > $bestLength || ($length === $bestLength && $isClientSpecific && ! $bestIsClientSpecific)) {
                 $best = $trustedSource;
                 $bestLength = $length;
+                $bestIsClientSpecific = $isClientSpecific;
             }
         }
 
