@@ -216,8 +216,10 @@ final class PipelineJobsTest extends TestCase
                     'driver' => 'fake',
                     'priority' => 10,
                     'config' => [
+                        // Mentions the model code but not the EAN: the EAN query must discard it,
+                        // the model-code query that follows must keep it.
                         'image_results' => [[
-                            'title' => 'Unrelated category page',
+                            'title' => 'Brand Model Red sneakers',
                             'page_url' => 'https://marketplace.example.test/category/shoes',
                             'image_url' => 'https://marketplace.example.test/banner.jpg',
                             'source_domain' => 'marketplace.example.test',
@@ -300,6 +302,101 @@ final class PipelineJobsTest extends TestCase
         self::assertSame('ean', $executions[0]['search_query']['intent']);
         self::assertSame(0, $executions[0]['discarded_results']);
         self::assertNotEmpty($executions[0]['execution']['results']);
+    }
+
+    public function test_search_job_discards_code_query_results_that_do_not_mention_the_model_code(): void
+    {
+        $store = new InMemoryPipelineStore();
+        $logger = new ProductImageEventLogger($store);
+        $searchManager = $this->fakeImageSearchManager([
+            'title' => 'Chloé sunglasses 001',
+            'page_url' => 'https://optics.example.test/chloe-sunglasses-001',
+            'image_url' => 'https://optics.example.test/1.jpg',
+            'source_domain' => 'optics.example.test',
+        ]);
+
+        $request = (new IngestProductImageDiscoveryJob([
+            'client_id' => 11,
+            'erp_model_color_id' => '790715',
+            'brand' => 'Chloé',
+            'supplier_sku' => '26SSH01164 001',
+            'model_code' => '26SSH01164',
+            'color_code' => '001',
+            'name' => 'Wool gabardine shorts',
+        ]))->handle($store, $logger);
+
+        (new SearchProductImageJob($request['id']))->handle($store, $searchManager, $logger);
+
+        $executions = $store->getRequest($request['id'])['context']['search']['executions'];
+        $intents = array_map(static fn (array $execution): string => $execution['search_query']['intent'], $executions);
+
+        self::assertSame([
+            'supplier_sku_color_code',
+            'model_code_color_code',
+            'supplier_sku',
+            'model_code_description',
+            'model_code',
+            'description',
+        ], $intents);
+
+        foreach (array_slice($executions, 0, 5) as $execution) {
+            self::assertSame(1, $execution['discarded_results']);
+        }
+
+        self::assertSame(0, $executions[5]['discarded_results']);
+        self::assertSame('"Chloé" Wool gabardine shorts', $executions[5]['search_query']['query']);
+    }
+
+    public function test_search_job_keeps_code_query_results_that_mention_the_model_code(): void
+    {
+        $store = new InMemoryPipelineStore();
+        $logger = new ProductImageEventLogger($store);
+        $searchManager = $this->fakeImageSearchManager([
+            'title' => 'Chloé wool gabardine shorts',
+            'page_url' => 'https://shop.example.test/p/26ssh01164-001',
+            'image_url' => 'https://shop.example.test/p/1.jpg',
+            'source_domain' => 'shop.example.test',
+        ]);
+
+        $request = (new IngestProductImageDiscoveryJob([
+            'client_id' => 11,
+            'erp_model_color_id' => '790715',
+            'brand' => 'Chloé',
+            'supplier_sku' => '26SSH01164 001',
+            'model_code' => '26SSH01164',
+            'color_code' => '001',
+        ]))->handle($store, $logger);
+
+        (new SearchProductImageJob($request['id']))->handle($store, $searchManager, $logger);
+
+        $executions = $store->getRequest($request['id'])['context']['search']['executions'];
+
+        self::assertCount(1, $executions);
+        self::assertSame('supplier_sku_color_code', $executions[0]['search_query']['intent']);
+        self::assertSame(0, $executions[0]['discarded_results']);
+    }
+
+    /**
+     * @param array<string, string> $imageResult
+     */
+    private function fakeImageSearchManager(array $imageResult): SearchProviderManager
+    {
+        return new SearchProviderManager(
+            repository: new InMemorySearchProviderConfigRepository([
+                SearchProviderDefinition::fromArray([
+                    'code' => 'fake',
+                    'name' => 'Fake',
+                    'driver' => 'fake',
+                    'priority' => 10,
+                    'config' => ['image_results' => [$imageResult]],
+                ]),
+            ]),
+            factories: [
+                'fake' => new CallableSearchProviderFactory(
+                    static fn (SearchProviderDefinition $definition): FakeSearchProvider => FakeSearchProvider::fromDefinition($definition),
+                ),
+            ],
+        );
     }
 
     public function test_verify_job_scores_candidate_from_trusted_source_without_penalty(): void

@@ -39,6 +39,9 @@ final readonly class ProductIdentityData implements JsonSerializable
     public static function fromArray(array $data): self
     {
         $metadata = is_array($data['metadata'] ?? null) ? $data['metadata'] : [];
+        // Persisted requests have no description/name column: the client payload only survives in
+        // raw_payload, so fall back to it or the product name never reaches query generation.
+        $rawPayload = is_array($data['raw_payload'] ?? null) ? $data['raw_payload'] : [];
 
         return new self(
             clientId: $data['client_id'] ?? $data['clientId'] ?? null,
@@ -64,7 +67,17 @@ final readonly class ProductIdentityData implements JsonSerializable
             season: TextNormalizer::nullableString($data['season'] ?? null),
             category: TextNormalizer::nullableString($data['category'] ?? null),
             material: TextNormalizer::nullableString($data['material'] ?? null),
-            description: TextNormalizer::nullableString($data['description'] ?? $data['name'] ?? $data['title'] ?? $metadata['description'] ?? $metadata['title'] ?? null),
+            description: TextNormalizer::nullableString(
+                $data['description']
+                ?? $data['name']
+                ?? $data['title']
+                ?? $metadata['description']
+                ?? $metadata['title']
+                ?? $rawPayload['description']
+                ?? $rawPayload['name']
+                ?? $rawPayload['title']
+                ?? null
+            ),
             rawPayload: is_array($data['raw_payload'] ?? null) ? $data['raw_payload'] : $data,
         );
     }

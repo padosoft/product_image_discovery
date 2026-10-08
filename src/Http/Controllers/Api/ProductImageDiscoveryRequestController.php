@@ -155,11 +155,20 @@ final class ProductImageDiscoveryRequestController extends Controller
         /** @var Model $record */
         $record = $this->newQuery('request')->findOrFail($request);
 
+        // The search/extract guards live in raw_payload.context: drop them or the re-dispatched
+        // pipeline returns early and the request stays queued without searching again.
+        $rawPayload = $record->getAttribute('raw_payload');
+
+        if (is_array($rawPayload) && is_array($rawPayload['context'] ?? null)) {
+            unset($rawPayload['context']['ingest'], $rawPayload['context']['search'], $rawPayload['context']['extract']);
+        }
+
         $record->fill([
             'status' => 'queued',
             'rejection_reason' => null,
             'last_error' => null,
             'attempts' => ((int) $record->getAttribute('attempts')) + 1,
+            'raw_payload' => $rawPayload,
         ]);
         $record->save();
 

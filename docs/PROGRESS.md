@@ -335,3 +335,20 @@ Docs-only PR. Updates:
 - `docs/ROADMAP_SEARCH_PROVIDERS.md`: PR5 → ✅ and final note redirecting new driver requests to the package's issue tracker.
 
 After merge: tag `v1.0.0` and `gh release create v1.0.0`.
+
+## Session 2026-10-08
+
+### Query fallbacks, product name and retry reset (branch `m-ad-fix-query`)
+
+Triggered by a Gescat production case: Chloé `26SSH01164`, color code `001`, no color name, no EAN. Every query paired the code with `001`, providers answered with Chloé sunglasses `001`, and the first non-empty query ended the search with only wrong-color candidates.
+
+- `GenerateSearchQueriesAction`: new colorless fallbacks after the color-aware queries: `model_code_description` (85), `model_code` (80), `site_model_code` (88, per trusted source) and, behind the existing strong-identifier gate, `description` (30). The name is left unquoted.
+- `ProductIdentityData::fromArray()`: description falls back to `raw_payload.description|name|title`, so the name sent by the client reaches query generation.
+- `SearchProductImageJob`: the "discard results missing the identifier" check now covers supplier SKU (accepting the bare model code too) and model code intents, not only EAN. Name-only intents are not filtered.
+- `POST /requests/{id}/retry`: clears `context.ingest|search|extract` so the re-dispatched pipeline searches again.
+- Tests: query fallbacks, name from raw payload, site model code query, code-query discard/keep, retry reset. The EAN-discard fixture now mentions the model code (an unrelated page is correctly discarded by the model-code query too).
+
+### Verified Gates
+
+- `vendor/bin/phpunit --testsuite Unit,Feature,E2E`: 88 tests, 336 assertions, 4 skipped (live tests).
+

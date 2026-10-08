@@ -77,6 +77,17 @@ final class GenerateSearchQueriesAction
             $add($brand . ' ' . $this->quote($identity->supplierSku), 'supplier_sku', 90);
         }
 
+        // Colorless fallbacks: a color code like "001" is shared by unrelated products of the same
+        // brand, so the color-aware queries above can come back with only wrong items. The product
+        // name is left unquoted because retailers rarely reuse the ERP name verbatim.
+        if ($identity->modelCode !== null && $identity->description !== null) {
+            $add($brand . ' ' . $this->quote($identity->modelCode) . ' ' . $identity->description, 'model_code_description', 85);
+        }
+
+        if ($identity->modelCode !== null) {
+            $add($brand . ' ' . $this->quote($identity->modelCode), 'model_code', 80);
+        }
+
         if ($identity->hasStrongIdentifier() || $allowGenericWithoutStrongIdentifier) {
             if ($identity->description !== null && $identity->colorName !== null) {
                 $add($brand . ' ' . $this->quote($identity->description) . ' ' . $this->quote($identity->colorName), 'description_color', 40);
@@ -84,6 +95,10 @@ final class GenerateSearchQueriesAction
 
             if ($identity->season !== null && $identity->modelCode !== null) {
                 $add($brand . ' ' . $this->quote($identity->season) . ' ' . $this->quote($identity->modelCode), 'season_model_code', 35);
+            }
+
+            if ($identity->description !== null) {
+                $add($brand . ' ' . $identity->description, 'description', 30);
             }
         }
 
@@ -121,6 +136,10 @@ final class GenerateSearchQueriesAction
 
                 if ($identity->supplierSku !== null) {
                     $add('site:' . $domain . ' ' . $this->quote($identity->supplierSku), 'site_supplier_sku', 92, 'image', $domain, ['source' => $source]);
+                }
+
+                if ($identity->modelCode !== null) {
+                    $add('site:' . $domain . ' ' . $this->quote($identity->modelCode), 'site_model_code', 88, 'image', $domain, ['source' => $source]);
                 }
             }
         }

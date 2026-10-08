@@ -86,4 +86,59 @@ final class GenerateSearchQueriesActionTest extends TestCase
         self::assertSame('"Acme" "8012345678901"', $queries[0]->query);
         self::assertSame('ean', $queries[0]->intent);
     }
+
+    public function test_it_adds_colorless_fallbacks_after_color_aware_queries(): void
+    {
+        $identity = ProductIdentityData::fromArray([
+            'brand' => 'Chloé',
+            'supplier_sku' => '26SSH01164 001',
+            'model_code' => '26SSH01164',
+            'color_code' => '001',
+            'name' => 'Wool gabardine shorts',
+        ]);
+
+        $queries = (new GenerateSearchQueriesAction())->handle($identity);
+        $byIntent = array_column(array_map(static fn ($query): array => [$query->intent, $query->query], $queries), 1, 0);
+
+        self::assertSame([
+            'supplier_sku_color_code',
+            'model_code_color_code',
+            'supplier_sku',
+            'model_code_description',
+            'model_code',
+            'description',
+        ], array_keys($byIntent));
+        self::assertSame('"Chloé" "26SSH01164" Wool gabardine shorts', $byIntent['model_code_description']);
+        self::assertSame('"Chloé" "26SSH01164"', $byIntent['model_code']);
+        self::assertSame('"Chloé" Wool gabardine shorts', $byIntent['description']);
+    }
+
+    public function test_it_reads_the_product_name_from_the_raw_payload(): void
+    {
+        $identity = ProductIdentityData::fromArray([
+            'brand' => 'Chloé',
+            'model_code' => '26SSH01164',
+            'raw_payload' => ['name' => 'Wool gabardine shorts'],
+        ]);
+
+        self::assertSame('Wool gabardine shorts', $identity->description);
+    }
+
+    public function test_it_adds_a_site_model_code_query_for_trusted_sources(): void
+    {
+        $identity = ProductIdentityData::fromArray([
+            'brand' => 'Chloé',
+            'model_code' => '26SSH01164',
+            'color_code' => '001',
+        ]);
+
+        $queries = (new GenerateSearchQueriesAction())->handle($identity, [
+            ['domain' => 'chloe.com', 'allow_search' => true, 'is_active' => true],
+        ]);
+
+        $siteModelCode = array_values(array_filter($queries, static fn ($query): bool => $query->intent === 'site_model_code'));
+
+        self::assertCount(1, $siteModelCode);
+        self::assertSame('site:chloe.com "26SSH01164"', $siteModelCode[0]->query);
+    }
 }
