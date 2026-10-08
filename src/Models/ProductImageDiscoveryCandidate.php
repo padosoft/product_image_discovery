@@ -17,6 +17,7 @@ class ProductImageDiscoveryCandidate extends Model
 
     protected $fillable = [
         'request_id',
+        'search_run',
         'client_id',
         'fingerprint',
         'source_domain',
@@ -52,6 +53,7 @@ class ProductImageDiscoveryCandidate extends Model
 
     protected $casts = [
         'request_id' => 'integer',
+        'search_run' => 'integer',
         'client_id' => 'integer',
         'source_trust_score' => 'integer',
         'textual_match_score' => 'integer',

@@ -26,6 +26,41 @@ final class CandidatesApiTest extends ApiTestCase
             ->assertForbidden();
     }
 
+    public function test_candidates_index_lists_the_latest_search_run_unless_all_runs_is_requested(): void
+    {
+        $record = FakeProductImageDiscoveryRequest::query()->create([
+            'client_id' => 10,
+            'erp_model_id' => 'MODEL-001',
+            'erp_model_color_id' => 'MODEL-001-BLK',
+            'status' => 'no_candidates_found',
+            'raw_payload' => ['context' => ['search' => ['run' => 2]]],
+        ]);
+
+        foreach ([1 => 'old', 2 => 'new'] as $searchRun => $slug) {
+            FakeProductImageDiscoveryCandidate::query()->create([
+                'request_id' => $record->getKey(),
+                'search_run' => $searchRun,
+                'client_id' => 10,
+                'source_domain' => 'supplier.example',
+                'source_page_url' => 'https://supplier.example/p/' . $slug,
+                'image_url' => 'https://supplier.example/images/' . $slug . '.jpg',
+                'status' => 'low_score_rejected',
+            ]);
+        }
+
+        $this->authenticate(['read']);
+        $url = '/api/product-image-discovery/requests/' . $record->getKey() . '/candidates';
+
+        $this->getJson($url)
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.search_run', 2);
+
+        $this->getJson($url . '?all_runs=1')
+            ->assertOk()
+            ->assertJsonCount(2, 'data');
+    }
+
     public function test_reject_requires_reason(): void
     {
         [$record, $candidate] = $this->seedRequestWithCandidate();

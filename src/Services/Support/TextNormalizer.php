@@ -195,6 +195,40 @@ final class TextNormalizer
         return false;
     }
 
+    /**
+     * Color codes written right after a product code, the way retailers spell color variants
+     * ("26SSH01164-002", "26SSH01164 002", ".../26ssh01164-002.html"). Only product codes of at
+     * least six characters are looked up, and a suffix counts only when it has the shape of the
+     * expected color code (same length, digits and letters in the same places, at least three
+     * characters with a digit), so sizes, years and percentages ("38", "2026", "100%") are ignored.
+     *
+     * @return list<string> normalized suffixes found after the code, e.g. ["002"]
+     */
+    public static function colorCodesAfterCode(string $haystack, ?string $code, ?string $colorCode): array
+    {
+        $code = self::normalizeCode($code);
+        $colorCode = self::normalizeCode($colorCode);
+
+        if ($code === null || $colorCode === null || strlen($code) < 6 || strlen($colorCode) < 3 || preg_match('/\d/', $colorCode) !== 1) {
+            return [];
+        }
+
+        $shape = static fn (string $value): string => (string) preg_replace(['/[A-Z]/', '/\d/'], ['A', '9'], $value);
+        $pattern = '/(?<![A-Z0-9])' . preg_quote($code, '/') . '[\s\-_\/.]?([A-Z0-9]{' . strlen($colorCode) . '})(?![A-Z0-9%]|\s*%|\s*(?:CM|MM)\b)/';
+
+        preg_match_all($pattern, strtoupper(self::toAscii($haystack)), $matches);
+
+        $suffixes = [];
+
+        foreach ($matches[1] ?? [] as $suffix) {
+            if ($shape($suffix) === $shape($colorCode)) {
+                $suffixes[$suffix] = $suffix;
+            }
+        }
+
+        return array_values($suffixes);
+    }
+
     public static function canonicalColor(?string $value): ?string
     {
         $value = self::normalizeText($value);

@@ -14,6 +14,7 @@ final class ProductImageDiscoveryCandidateResource extends JsonResource
         return [
             'id' => $this->resource->getKey(),
             'request_id' => $this->resource->getAttribute('request_id'),
+            'search_run' => $this->resource->getAttribute('search_run'),
             'client_id' => $this->resource->getAttribute('client_id'),
             'source_domain' => $this->resource->getAttribute('source_domain'),
             'source_page_url' => $this->resource->getAttribute('source_page_url'),

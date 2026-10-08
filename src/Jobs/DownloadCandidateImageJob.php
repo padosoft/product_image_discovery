@@ -12,6 +12,7 @@ use Illuminate\Queue\SerializesModels;
 use Padosoft\ProductImageDiscovery\Enums\ProductImageDiscoveryCandidateStatus;
 use Padosoft\ProductImageDiscovery\Enums\ProductImageDiscoveryRejectionReason;
 use Padosoft\ProductImageDiscovery\Enums\ProductImageDiscoveryRequestStatus;
+use Padosoft\ProductImageDiscovery\Jobs\Concerns\ClosesRequestWithoutMatch;
 use Padosoft\ProductImageDiscovery\Jobs\Concerns\DispatchesPipelineJobs;
 use Padosoft\ProductImageDiscovery\Jobs\Concerns\ResolvesQueueName;
 use Padosoft\ProductImageDiscovery\Jobs\Contracts\PipelineStoreInterface;
@@ -19,6 +20,7 @@ use Padosoft\ProductImageDiscovery\Services\Logging\ProductImageEventLogger;
 
 final class DownloadCandidateImageJob implements ShouldQueue
 {
+    use ClosesRequestWithoutMatch;
     use Dispatchable;
     use DispatchesPipelineJobs;
     use InteractsWithQueue;
@@ -60,6 +62,9 @@ final class DownloadCandidateImageJob implements ShouldQueue
             $logger->record('pipeline.download.skipped', [
                 'reason' => 'no_downloadable_image',
             ], 'warning', $this->requestId, $this->candidateId);
+
+            // When this was the only promoted candidate the request would otherwise stay "matched".
+            $this->closeRequestWhenNothingWasPromoted($store, $logger);
 
             return $updated;
         }

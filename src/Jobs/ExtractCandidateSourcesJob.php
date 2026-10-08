@@ -92,6 +92,7 @@ final class ExtractCandidateSourcesJob implements ShouldQueue
                 (string) ($result['fingerprint'] ?? sha1(strtolower((string) $candidateData->sourcePageUrl).'|'.strtolower((string) $candidateData->imageUrl))),
                 array_merge($candidateData->toArray(), [
                     'client_id' => $request['client_id'] ?? null,
+                    'search_run' => $context['search']['run'] ?? null,
                     'status' => ProductImageDiscoveryCandidateStatus::Candidate->value,
                     'quality_analysis' => $result['provider_metadata'] ?? [],
                 ]),

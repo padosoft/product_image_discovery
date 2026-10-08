@@ -275,6 +275,83 @@ final class AntiFalsePositiveDecisionTest extends TestCase
         self::assertTrue($score->modelMatched);
     }
 
+    public function test_same_model_code_with_another_color_code_is_a_wrong_color_variant(): void
+    {
+        $identity = $this->chloeIdentity();
+        $candidate = CandidateImageData::fromArray([
+            'source_page_url' => 'https://trusted.example/products/26ssh01164-002',
+            'image_url' => 'https://trusted.example/images/26ssh01164-002.jpg',
+            'title' => 'Chloé shorts 26SSH01164-002',
+            'quality_score' => 96,
+        ]);
+
+        $score = $this->score->handle($identity, $candidate, $this->trustedSource());
+
+        self::assertTrue($score->colorMismatch);
+        self::assertContains('color_code_variant_mismatch', $score->evidence['mismatches']);
+        self::assertSame('low_score_rejected', $score->status);
+        self::assertSame('WRONG_COLOR', $score->rejectionReason);
+    }
+
+    public function test_model_code_with_the_expected_color_code_attached_matches_the_color(): void
+    {
+        $candidate = CandidateImageData::fromArray([
+            'source_page_url' => 'https://shop.example/p/1',
+            'image_url' => 'https://shop.example/p/1.jpg',
+            'title' => 'Chloé shorts 26SSH01164-001',
+        ]);
+
+        $score = $this->score->handle($this->chloeIdentity(), $candidate);
+
+        self::assertTrue($score->colorMatched);
+        self::assertFalse($score->colorMismatch);
+        self::assertContains('color_code', $score->evidence['matches']);
+        self::assertSame('candidate', $score->status);
+    }
+
+    public function test_a_page_listing_several_color_variants_proves_no_color(): void
+    {
+        $candidate = CandidateImageData::fromArray([
+            'source_page_url' => 'https://shop.example/p/1',
+            'image_url' => 'https://shop.example/p/1.jpg',
+            'title' => 'Chloé shorts 26SSH01164-001 26SSH01164-002',
+        ]);
+
+        $score = $this->score->handle($this->chloeIdentity(), $candidate);
+
+        self::assertFalse($score->colorMatched);
+        self::assertFalse($score->colorMismatch);
+    }
+
+    public function test_variant_check_is_off_when_the_color_code_is_a_color_name(): void
+    {
+        $identity = ProductIdentityData::fromArray([
+            'brand' => 'Chloé',
+            'model_code' => '26SSH01164',
+            'color_code' => 'Beige',
+        ]);
+        $candidate = CandidateImageData::fromArray([
+            'source_page_url' => 'https://shop.example/p/1',
+            'image_url' => 'https://shop.example/p/1.jpg',
+            'title' => 'Chloé shorts 26SSH01164 002',
+        ]);
+
+        $score = $this->score->handle($identity, $candidate);
+
+        self::assertFalse($score->colorMismatch);
+        self::assertNotContains('color_code_variant_mismatch', $score->evidence['mismatches']);
+    }
+
+    private function chloeIdentity(): ProductIdentityData
+    {
+        return ProductIdentityData::fromArray([
+            'brand' => 'Chloé',
+            'supplier_sku' => '26SSH01164',
+            'model_code' => '26SSH01164',
+            'color_code' => '001',
+        ]);
+    }
+
     /**
      * @return array<string, mixed>
      */

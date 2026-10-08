@@ -192,6 +192,28 @@ final class ScoreCandidateImageAction
             $flags['color_matched'] = true;
         }
 
+        // Retailers spell color variants as "<code>-<color code>": the same model code followed by
+        // another color code is a different variant, never this product.
+        $attachedColorCodes = [];
+
+        foreach (array_unique(array_filter([$identity->supplierSku, $identity->modelCode])) as $code) {
+            $attachedColorCodes = array_merge($attachedColorCodes, TextNormalizer::colorCodesAfterCode($corpus, $code, $identity->colorCode));
+        }
+
+        $expectedColorCode = TextNormalizer::normalizeCode($identity->colorCode);
+        $attachesExpectedColor = in_array($expectedColorCode, $attachedColorCodes, true);
+        $attachesOtherColors = array_diff($attachedColorCodes, [$expectedColorCode]) !== [];
+
+        // A page listing several variants (expected one included) proves neither: leave it neutral.
+        if ($attachesExpectedColor && ! $attachesOtherColors && ! in_array('color_code', $matches, true)) {
+            $score += 12;
+            $matches[] = 'color_code';
+            $flags['color_matched'] = true;
+        } elseif ($attachesOtherColors && ! $attachesExpectedColor) {
+            $mismatches[] = 'color_code_variant_mismatch';
+            $flags['color_mismatch'] = true;
+        }
+
         $expectedColor = $identity->normalizedColorName();
 
         if ($expectedColor !== null) {

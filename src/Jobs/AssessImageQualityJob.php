@@ -15,6 +15,7 @@ use Padosoft\ProductImageDiscovery\Enums\ProductImageDiscoveryCandidateStatus;
 use Padosoft\ProductImageDiscovery\Enums\ProductImageDiscoveryRejectionReason;
 use Padosoft\ProductImageDiscovery\Enums\ProductImageDiscoveryRequestStatus;
 use Padosoft\ProductImageDiscovery\Jobs\Concerns\ResolvesQueueName;
+use Padosoft\ProductImageDiscovery\Jobs\Concerns\ScopesCandidatesToSearchRun;
 use Padosoft\ProductImageDiscovery\Jobs\Contracts\PipelineStoreInterface;
 use Padosoft\ProductImageDiscovery\Services\Logging\ProductImageEventLogger;
 use Padosoft\ProductImageDiscovery\Services\Quality\ImageQualityAnalyzer;
@@ -25,6 +26,7 @@ final class AssessImageQualityJob implements ShouldQueue
     use InteractsWithQueue;
     use Queueable;
     use ResolvesQueueName;
+    use ScopesCandidatesToSearchRun;
     use SerializesModels;
 
     public function __construct(
@@ -79,6 +81,9 @@ final class AssessImageQualityJob implements ShouldQueue
             'file_size' => $analysis['file_size'] ?? ($candidate['file_size'] ?? null),
         ]);
 
+        // Only this run's candidates compete: a leftover from an earlier run must not become the best.
+        $runCandidates = $this->candidatesOfCurrentRun($store, $request);
+
         $candidateScores = array_map(static function (array $item): array {
             return CandidateScoreData::fromArray([
                 'source_trust_score' => $item['source_trust_score'] ?? 0,
@@ -105,11 +110,11 @@ final class AssessImageQualityJob implements ShouldQueue
                 'rejection_reason' => $item['rejection_reason'] ?? null,
                 'status' => $item['status'] ?? ProductImageDiscoveryCandidateStatus::Candidate->value,
             ])->toArray();
-        }, $store->listCandidates($this->requestId));
+        }, $runCandidates);
 
         $decision = ($decisionResolver ?? new ResolveDecisionAction())->handle($candidateScores);
         $bestCandidateScore = is_array($decision['best_candidate_score'] ?? null) ? $decision['best_candidate_score'] : null;
-        $bestCandidateId = $this->findCandidateIdForScore($store->listCandidates($this->requestId), $bestCandidateScore);
+        $bestCandidateId = $this->findCandidateIdForScore($this->candidatesOfCurrentRun($store, $request), $bestCandidateScore);
 
         $requestStatus = $this->mapRequestStatus((string) ($decision['status'] ?? ProductImageDiscoveryRequestStatus::ManualReview->value));
 

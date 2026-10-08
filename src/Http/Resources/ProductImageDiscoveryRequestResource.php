@@ -6,6 +6,7 @@ namespace Padosoft\ProductImageDiscovery\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Padosoft\ProductImageDiscovery\Services\Support\SearchRun;
 
 final class ProductImageDiscoveryRequestResource extends JsonResource
 {
@@ -30,6 +31,7 @@ final class ProductImageDiscoveryRequestResource extends JsonResource
             'final_score' => $this->resource->getAttribute('final_score'),
             'rejection_reason' => $this->resource->getAttribute('rejection_reason'),
             'attempts' => $this->resource->getAttribute('attempts'),
+            'search_run' => SearchRun::current($this->resource->getAttribute('raw_payload')),
             'raw_payload' => $this->resource->getAttribute('raw_payload'),
             'best_candidate' => $this->when(
                 $this->resource->relationLoaded('bestCandidate'),

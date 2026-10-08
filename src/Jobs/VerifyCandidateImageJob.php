@@ -15,6 +15,7 @@ use Padosoft\ProductImageDiscovery\DTO\ProductIdentityData;
 use Padosoft\ProductImageDiscovery\Enums\ProductImageDiscoveryCandidateStatus;
 use Padosoft\ProductImageDiscovery\Enums\ProductImageDiscoveryRequestStatus;
 use Padosoft\ProductImageDiscovery\Enums\ProductImageDiscoveryRejectionReason;
+use Padosoft\ProductImageDiscovery\Jobs\Concerns\ClosesRequestWithoutMatch;
 use Padosoft\ProductImageDiscovery\Jobs\Concerns\DispatchesPipelineJobs;
 use Padosoft\ProductImageDiscovery\Jobs\Concerns\ResolvesQueueName;
 use Padosoft\ProductImageDiscovery\Jobs\Contracts\PipelineStoreInterface;
@@ -24,6 +25,7 @@ use Padosoft\ProductImageDiscovery\Services\Support\TrustedSourceMatcher;
 
 final class VerifyCandidateImageJob implements ShouldQueue
 {
+    use ClosesRequestWithoutMatch;
     use Dispatchable;
     use DispatchesPipelineJobs;
     use InteractsWithQueue;
@@ -61,9 +63,21 @@ final class VerifyCandidateImageJob implements ShouldQueue
             return $candidate;
         }
 
-        $store->updateRequest($this->requestId, [
-            'status' => ProductImageDiscoveryRequestStatus::Verifying->value,
-        ]);
+        // Verify jobs of one run finish in any order: a late one must not pull back a request the
+        // download/quality chain of a promoted candidate has already moved forward or decided.
+        if (! in_array($request['status'] ?? null, [
+            ProductImageDiscoveryRequestStatus::Matched->value,
+            ProductImageDiscoveryRequestStatus::Downloaded->value,
+            ProductImageDiscoveryRequestStatus::QualityChecking->value,
+            ProductImageDiscoveryRequestStatus::ReadyToPublish->value,
+            ProductImageDiscoveryRequestStatus::ManualReview->value,
+            ProductImageDiscoveryRequestStatus::Rejected->value,
+            ProductImageDiscoveryRequestStatus::Published->value,
+        ], true)) {
+            $store->updateRequest($this->requestId, [
+                'status' => ProductImageDiscoveryRequestStatus::Verifying->value,
+            ]);
+        }
 
         $aiAnalysis = $candidate['ai_analysis'] ?? [];
 
@@ -143,15 +157,17 @@ final class VerifyCandidateImageJob implements ShouldQueue
             'rejection_reason' => $score->rejectionReason,
         ], requestId: $this->requestId, candidateId: $this->candidateId);
 
-        $store->updateRequest($this->requestId, [
-            'status' => $candidateStatus === ProductImageDiscoveryCandidateStatus::VerifiedMatch
-                ? ProductImageDiscoveryRequestStatus::Matched->value
-                : ProductImageDiscoveryRequestStatus::ManualReview->value,
-        ]);
-
         if ($candidateStatus === ProductImageDiscoveryCandidateStatus::VerifiedMatch) {
+            $store->updateRequest($this->requestId, [
+                'status' => ProductImageDiscoveryRequestStatus::Matched->value,
+            ]);
+
             $this->dispatchIfPossible(new DownloadCandidateImageJob($this->requestId, $this->candidateId));
+
+            return $updated;
         }
+
+        $this->closeRequestWhenNothingWasPromoted($store, $logger);
 
         return $updated;
     }
