@@ -72,10 +72,14 @@ final class SearchProductImageJob implements ShouldQueue
             ];
         }
 
+        // Every search starts a new run: candidates are tagged with it so earlier runs never leak
+        // into this run's decision.
+        $searchRun = (int) ($request['attempts'] ?? 0) + 1;
+
         $store->updateRequest($this->requestId, [
             'status' => ProductImageDiscoveryRequestStatus::Searching->value,
             'search_started_at' => gmdate('c'),
-            'attempts' => (int) ($request['attempts'] ?? 0) + 1,
+            'attempts' => $searchRun,
         ]);
 
         $executions = [];
@@ -131,6 +135,7 @@ final class SearchProductImageJob implements ShouldQueue
         ]);
         $store->mergeRequestContext($this->requestId, [
             'search' => [
+                'run' => $searchRun,
                 'completed_at' => gmdate('c'),
                 'queries' => array_map(static fn (SearchQueryData $query): array => $query->toArray(), $searchQueries),
                 'execution' => $execution->toArray(),
@@ -154,21 +159,23 @@ final class SearchProductImageJob implements ShouldQueue
      * Fuzzy providers return unrelated results even for identifiers that are not
      * indexed anywhere; an identifier-driven query must only win the "first
      * non-empty query" race with results that actually mention the identifier.
+     *
+     * Only the EAN is checked: image providers such as Brave return the retailer title and
+     * URLs, which almost never carry the supplier SKU or model code, so filtering on those
+     * dropped the right product pages too. Codes are weighed by ScoreCandidateImageAction.
      */
     private function discardResultsMissingIdentifier(
         SearchQueryData $searchQuery,
         ProductIdentityData $identity,
         SearchProviderExecutionResult $execution,
     ): SearchProviderExecutionResult {
-        $identifiers = $this->identifiersRequiredBy($searchQuery->intent, $identity);
-
-        if ($identifiers === []) {
+        if ($identity->ean === null || ! in_array($searchQuery->intent, ['ean', 'site_ean'], true)) {
             return $execution;
         }
 
         $kept = array_values(array_filter(
             $execution->results->all(),
-            fn (SearchResult $result): bool => $this->resultMentionsAnyIdentifier($result, $identifiers),
+            fn (SearchResult $result): bool => $this->resultMentionsIdentifier($result, $identity->ean),
         ));
 
         if (count($kept) === $execution->results->count()) {
@@ -183,35 +190,14 @@ final class SearchProductImageJob implements ShouldQueue
         );
     }
 
-    /**
-     * Identifiers a result must mention to count for the given query intent. Supplier SKU
-     * queries also accept the bare model code, since retailers often drop the color suffix.
-     * Name-only queries (description, description_color) carry no identifier to check.
-     *
-     * @return list<string>
-     */
-    private function identifiersRequiredBy(string $intent, ProductIdentityData $identity): array
+    private function resultMentionsIdentifier(SearchResult $result, string $identifier): bool
     {
-        $intent = str_starts_with($intent, 'site_') ? substr($intent, 5) : $intent;
+        $needle = strtolower((string) preg_replace('/[^a-z0-9]+/i', '', $identifier));
 
-        $identifiers = match (true) {
-            $intent === 'ean' => [$identity->ean],
-            str_starts_with($intent, 'supplier_sku') => [$identity->supplierSku, $identity->modelCode],
-            str_starts_with($intent, 'model_code'), $intent === 'season_model_code' => [$identity->modelCode],
-            default => [],
-        };
+        if ($needle === '') {
+            return true;
+        }
 
-        return array_values(array_filter(
-            $identifiers,
-            static fn (?string $identifier): bool => $identifier !== null && preg_replace('/[^a-z0-9]+/i', '', $identifier) !== '',
-        ));
-    }
-
-    /**
-     * @param list<string> $identifiers
-     */
-    private function resultMentionsAnyIdentifier(SearchResult $result, array $identifiers): bool
-    {
         $haystack = strtolower(implode(' ', array_filter([
             $result->title,
             $result->pageUrl,
@@ -221,14 +207,6 @@ final class SearchProductImageJob implements ShouldQueue
             TextNormalizer::flattenStrings($result->providerMetadata),
         ], static fn (?string $part): bool => $part !== null && $part !== '')));
 
-        $haystack = (string) preg_replace('/[^a-z0-9]+/', '', $haystack);
-
-        foreach ($identifiers as $identifier) {
-            if (str_contains($haystack, strtolower((string) preg_replace('/[^a-z0-9]+/i', '', $identifier)))) {
-                return true;
-            }
-        }
-
-        return false;
+        return str_contains((string) preg_replace('/[^a-z0-9]+/', '', $haystack), $needle);
     }
 }

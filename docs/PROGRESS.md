@@ -352,3 +352,19 @@ Triggered by a Gescat production case: Chloé `26SSH01164`, color code `001`, no
 
 - `vendor/bin/phpunit --testsuite Unit,Feature,E2E`: 88 tests, 336 assertions, 4 skipped (live tests).
 
+
+### Search safety fixes for v1.2.1 (branch `m-ad-search-safety`)
+
+Triggered by Gescat production runs on v1.2.0 (requests 2, 6, 7, 8): every supplier SKU / model code query had all 10 Brave results discarded, the search fell through to `description_color`, which only returned aggregator category pages, and the requests stayed in `manual_review` with nothing to review. Retried requests also accumulated candidates of every earlier run.
+
+- `SearchProductImageJob`: the identifier check is back to EAN intents only (as in `ea3e380`); supplier SKU / model code results reach scoring again. Each search records its run in `context.search.run` (= the new `attempts`).
+- `ScoreCandidateImageAction` + `TextNormalizer::colorCodesAfterCode()`: a model code / supplier SKU followed by another color code (`26SSH01164-002` for `001`) is `WRONG_COLOR`; followed by the expected one it counts as the existing `color_code` match. Guarded against sizes, years and percentages; off for color codes shorter than 3 characters or without digits, and when several variants are listed.
+- `VerifyCandidateImageJob`: no longer writes `manual_review` for rejected candidates; once every candidate of the run is rejected the request is closed as `no_candidates_found` with the prevailing `rejection_reason` (`SOURCE_NOT_ALLOWED` reported as `LOW_CONFIDENCE`) and a `pipeline.verify.no_match` event. A late verify job no longer pulls a decided request back to `verifying`. `DownloadCandidateImageJob` closes the request the same way when the only promoted candidate cannot be downloaded.
+- Candidates carry `search_run` (new migration); `AssessImageQualityJob` decides on the latest run only; `GET /requests/{id}/candidates` lists the latest run unless `all_runs=1`; the request resource exposes `search_run`.
+- Not changed on purpose: score weights (double counting of the same code, see LESSON), trusted sources, auto-publish gates.
+- Tests: EAN-only filter, run tagging, no-match close (ignoring earlier runs), late verification, run-scoped decision, failed download close, color variant scoring and normalizer edge cases, run-scoped candidates API.
+
+### Verified Gates
+
+- `vendor/bin/phpunit --testsuite Unit,Feature`: 109 tests, 345 assertions (incl. an Eloquent-store run of the no-match close).
+- `vendor/bin/phpunit --testsuite E2E`: 6 tests, 4 skipped (live tests).

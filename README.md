@@ -972,6 +972,16 @@ curl "https://your-app.test/api/product-image-discovery/requests/search?status=m
   -H "Accept: application/json"
 ```
 
+List the candidates of a request. Every search (first run, `/retry`, or a re-POST of the same `erp_model_color_id`) is a new run, stored in `raw_payload.context.search.run` and on each candidate as `search_run`; the list shows the latest run only, add `all_runs=1` for the full history:
+
+```bash
+curl "https://your-app.test/api/product-image-discovery/requests/1/candidates?all_runs=1" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Accept: application/json"
+```
+
+When every candidate of the run is rejected the request ends as `no_candidates_found`, with the prevailing reason in `rejection_reason` (for example `WRONG_COLOR`); `manual_review` is reserved for requests with a candidate to review.
+
 Approve a candidate:
 
 ```bash

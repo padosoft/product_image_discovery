@@ -12,19 +12,27 @@ use Padosoft\ProductImageDiscovery\Http\Concerns\ResolvesProductImageDiscovery;
 use Padosoft\ProductImageDiscovery\Http\Requests\RejectProductImageDiscoveryCandidateRequest;
 use Padosoft\ProductImageDiscovery\Http\Resources\ProductImageDiscoveryCandidateResource;
 use Padosoft\ProductImageDiscovery\Http\Resources\ProductImageDiscoveryRequestResource;
+use Padosoft\ProductImageDiscovery\Services\Support\SearchRun;
 
 final class ProductImageDiscoveryCandidateController extends Controller
 {
     use ResolvesProductImageDiscovery;
 
-    public function index(int|string $request)
+    public function index(Request $httpRequest, int|string $request)
     {
         $record = $this->newQuery('request')->findOrFail($request);
-        $candidates = method_exists($record, 'candidates')
-            ? $record->candidates()->orderByDesc('final_score')->paginate(25)
-            : $this->newQuery('candidate')->where('request_id', $record->getKey())->orderByDesc('final_score')->paginate(25);
+        $query = method_exists($record, 'candidates')
+            ? $record->candidates()
+            : $this->newQuery('candidate')->where('request_id', $record->getKey());
+        $searchRun = SearchRun::current($record->getAttribute('raw_payload'));
 
-        return ProductImageDiscoveryCandidateResource::collection($candidates);
+        // Latest search run only, so a retry or re-POST does not mix old candidates with the new
+        // ones; ?all_runs=1 lists every run.
+        if ($searchRun !== null && ! $httpRequest->boolean('all_runs')) {
+            $query->where('search_run', $searchRun);
+        }
+
+        return ProductImageDiscoveryCandidateResource::collection($query->orderByDesc('final_score')->paginate(25));
     }
 
     public function approve(Request $httpRequest, int|string $request, int|string $candidate): JsonResponse

@@ -10,12 +10,15 @@ use Padosoft\ProductImageDiscovery\Database\Seeders\ProductImageDiscoveryDefault
 use Padosoft\ProductImageDiscovery\Enums\ProductImageDiscoveryCandidateStatus;
 use Padosoft\ProductImageDiscovery\Enums\ProductImageDiscoveryRejectionReason;
 use Padosoft\ProductImageDiscovery\Enums\ProductImageDiscoveryRequestStatus;
+use Padosoft\ProductImageDiscovery\Jobs\VerifyCandidateImageJob;
 use Padosoft\ProductImageDiscovery\Models\ProductImageDiscoveryCandidate;
 use Padosoft\ProductImageDiscovery\Models\ProductImageDiscoveryEvent;
 use Padosoft\ProductImageDiscovery\Models\ProductImageDiscoveryRequest;
 use Padosoft\ProductImageDiscovery\Models\ProductImageDiscoverySetting;
 use Padosoft\ProductImageDiscovery\Models\ProductImageSearchProvider;
 use Padosoft\ProductImageDiscovery\Models\ProductImageTrustedSource;
+use Padosoft\ProductImageDiscovery\Services\Logging\ProductImageEventLogger;
+use Padosoft\ProductImageDiscovery\Services\Storage\EloquentPipelineStore;
 
 class ProductImageDiscoveryDatabaseTest extends DatabaseTestCase
 {
@@ -163,6 +166,46 @@ class ProductImageDiscoveryDatabaseTest extends DatabaseTestCase
     /**
      * @return array<string, mixed>
      */
+    public function test_verify_closes_an_all_rejected_run_through_the_eloquent_store(): void
+    {
+        $store = new EloquentPipelineStore();
+        $logger = new ProductImageEventLogger();
+        $request = $store->upsertRequest(
+            ['client_id' => 100, 'erp_model_color_id' => 'MODEL-001-BLACK'],
+            array_merge($this->requestPayload(), [
+                'ean' => null,
+                'status' => ProductImageDiscoveryRequestStatus::CandidatesFound->value,
+                'raw_payload' => ['context' => ['search' => ['run' => 2]]],
+            ]),
+        );
+        // A promoted leftover of run 1 must neither keep run 2 open nor show up in its listing.
+        $store->upsertCandidate($request['id'], 'old', [
+            'search_run' => 1,
+            'source_page_url' => 'https://shop.example/p/old',
+            'image_url' => 'https://shop.example/p/old.jpg',
+            'status' => ProductImageDiscoveryCandidateStatus::VerifiedMatch->value,
+        ]);
+        $wrongColor = $store->upsertCandidate($request['id'], 'blue', [
+            'search_run' => 2,
+            'source_page_url' => 'https://shop.example/p/blue',
+            'image_url' => 'https://shop.example/p/blue.jpg',
+            'status' => ProductImageDiscoveryCandidateStatus::Candidate->value,
+            'evidence' => ['search_result' => ['title' => 'Acme MODEL-001 blue']],
+        ]);
+
+        (new VerifyCandidateImageJob($request['id'], $wrongColor['id']))->handle($store, $logger);
+
+        $closed = ProductImageDiscoveryRequest::query()->findOrFail($request['id']);
+
+        $this->assertSame(ProductImageDiscoveryRequestStatus::NoCandidatesFound, $closed->status);
+        $this->assertSame(ProductImageDiscoveryRejectionReason::WrongColor, $closed->rejection_reason);
+        $this->assertSame(2, ProductImageDiscoveryCandidate::query()->findOrFail($wrongColor['id'])->search_run);
+        $this->assertSame(
+            ProductImageDiscoveryCandidateStatus::WrongColor,
+            ProductImageDiscoveryCandidate::query()->findOrFail($wrongColor['id'])->status,
+        );
+    }
+
     protected function requestPayload(): array
     {
         return [

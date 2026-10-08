@@ -304,15 +304,17 @@ final class PipelineJobsTest extends TestCase
         self::assertNotEmpty($executions[0]['execution']['results']);
     }
 
-    public function test_search_job_discards_code_query_results_that_do_not_mention_the_model_code(): void
+    public function test_search_job_keeps_code_query_results_that_do_not_mention_the_code(): void
     {
+        // Retailer product pages rarely carry the supplier code in the title or URL returned by
+        // image providers: the result must reach scoring instead of being discarded.
         $store = new InMemoryPipelineStore();
         $logger = new ProductImageEventLogger($store);
         $searchManager = $this->fakeImageSearchManager([
-            'title' => 'Chloé sunglasses 001',
-            'page_url' => 'https://optics.example.test/chloe-sunglasses-001',
-            'image_url' => 'https://optics.example.test/1.jpg',
-            'source_domain' => 'optics.example.test',
+            'title' => 'Chloé Wool Gabardine Shorts',
+            'page_url' => 'https://www.retailer.example.test/en-it/p/chloe/wool-gabardine-shorts-210382.html',
+            'image_url' => 'https://images.retailer.example.test/210382_1.jpg',
+            'source_domain' => 'retailer.example.test',
         ]);
 
         $request = (new IngestProductImageDiscoveryJob([
@@ -327,24 +329,47 @@ final class PipelineJobsTest extends TestCase
 
         (new SearchProductImageJob($request['id']))->handle($store, $searchManager, $logger);
 
-        $executions = $store->getRequest($request['id'])['context']['search']['executions'];
-        $intents = array_map(static fn (array $execution): string => $execution['search_query']['intent'], $executions);
+        $search = $store->getRequest($request['id'])['context']['search'];
 
-        self::assertSame([
-            'supplier_sku_color_code',
-            'model_code_color_code',
-            'supplier_sku',
-            'model_code_description',
-            'model_code',
-            'description',
-        ], $intents);
+        self::assertCount(1, $search['executions']);
+        self::assertSame('supplier_sku_color_code', $search['executions'][0]['search_query']['intent']);
+        self::assertSame(0, $search['executions'][0]['discarded_results']);
+        self::assertCount(1, $search['execution']['results']);
+    }
 
-        foreach (array_slice($executions, 0, 5) as $execution) {
-            self::assertSame(1, $execution['discarded_results']);
-        }
+    public function test_each_search_starts_a_new_run_and_tags_its_candidates(): void
+    {
+        $store = new InMemoryPipelineStore();
+        $logger = new ProductImageEventLogger($store);
+        $searchManager = $this->fakeImageSearchManager([
+            'title' => 'Brand Model Red',
+            'page_url' => 'https://shop.example.test/p/1',
+            'image_url' => 'https://shop.example.test/p/1.jpg',
+            'source_domain' => 'shop.example.test',
+        ]);
 
-        self::assertSame(0, $executions[5]['discarded_results']);
-        self::assertSame('"Chloé" Wool gabardine shorts', $executions[5]['search_query']['query']);
+        $request = (new IngestProductImageDiscoveryJob([
+            'client_id' => 11,
+            'erp_model_color_id' => 'MODEL-RED',
+            'brand' => 'Brand',
+            'model_code' => 'Model',
+            'color_name' => 'Red',
+        ]))->handle($store, $logger);
+
+        (new SearchProductImageJob($request['id']))->handle($store, $searchManager, $logger);
+        (new ExtractCandidateSourcesJob($request['id']))->handle($store, $logger);
+
+        self::assertSame(1, $store->getRequest($request['id'])['context']['search']['run']);
+        self::assertSame(1, array_values($store->candidates)[0]['search_run']);
+
+        // A retry clears the pipeline context: the next search is run 2.
+        $store->requests[$request['id']]['context'] = [];
+
+        (new SearchProductImageJob($request['id']))->handle($store, $searchManager, $logger);
+        (new ExtractCandidateSourcesJob($request['id']))->handle($store, $logger);
+
+        self::assertSame(2, $store->getRequest($request['id'])['context']['search']['run']);
+        self::assertSame(2, array_values($store->candidates)[0]['search_run']);
     }
 
     public function test_search_job_keeps_code_query_results_that_mention_the_model_code(): void
@@ -455,5 +480,131 @@ final class PipelineJobsTest extends TestCase
 
         self::assertSame(33, (int) $updated['risk_penalty']);
         self::assertContains('SOURCE_NOT_ALLOWED', $updated['ai_analysis']['issues'] ?? []);
+    }
+
+    public function test_verify_closes_the_request_as_no_candidates_found_when_every_candidate_of_the_run_is_rejected(): void
+    {
+        $store = new InMemoryPipelineStore();
+        $logger = new ProductImageEventLogger($store);
+        $request = $this->requestInRun($store, 2, 'candidates_found');
+        // A promoted leftover of an earlier run must not keep the current run open.
+        $store->upsertCandidate($request['id'], 'old', [
+            'search_run' => 1,
+            'status' => 'verified_match',
+            'final_score' => 95,
+        ]);
+        $candidates = [
+            $this->candidateInRun($store, $request['id'], 2, 'blue', 'Brand Model Blue'),
+            $this->candidateInRun($store, $request['id'], 2, 'green', 'Brand Model Green'),
+            $this->candidateInRun($store, $request['id'], 2, 'other', 'Unrelated jacket'),
+        ];
+
+        (new VerifyCandidateImageJob($request['id'], $candidates[0]['id']))->handle($store, $logger);
+        (new VerifyCandidateImageJob($request['id'], $candidates[1]['id']))->handle($store, $logger);
+
+        self::assertSame('verifying', $store->getRequest($request['id'])['status']);
+
+        (new VerifyCandidateImageJob($request['id'], $candidates[2]['id']))->handle($store, $logger);
+
+        $closed = $store->getRequest($request['id']);
+        $event = array_values(array_filter($store->events, static fn (array $event): bool => $event['event_type'] === 'pipeline.verify.no_match'))[0];
+
+        self::assertSame('no_candidates_found', $closed['status']);
+        self::assertSame('WRONG_COLOR', $closed['rejection_reason']);
+        self::assertNull($closed['best_candidate_id']);
+        self::assertNull($closed['final_score']);
+        self::assertSame(['WRONG_COLOR' => 2, 'LOW_CONFIDENCE' => 1], $event['context']['rejection_reasons']);
+    }
+
+    public function test_a_late_rejected_verification_does_not_pull_back_a_decided_request(): void
+    {
+        $store = new InMemoryPipelineStore();
+        $logger = new ProductImageEventLogger($store);
+        $request = $this->requestInRun($store, 1, 'manual_review');
+        $store->upsertCandidate($request['id'], 'promoted', [
+            'search_run' => 1,
+            'status' => 'quality_passed',
+            'final_score' => 80,
+        ]);
+        $late = $this->candidateInRun($store, $request['id'], 1, 'blue', 'Brand Model Blue');
+
+        (new VerifyCandidateImageJob($request['id'], $late['id']))->handle($store, $logger);
+
+        self::assertSame('wrong_color', $store->getCandidate($late['id'])['status']);
+        self::assertSame('manual_review', $store->getRequest($request['id'])['status']);
+    }
+
+    public function test_quality_decision_ignores_candidates_of_earlier_runs(): void
+    {
+        $store = new InMemoryPipelineStore();
+        $logger = new ProductImageEventLogger($store);
+        $request = $this->requestInRun($store, 2, 'downloaded');
+        $image = ['width' => 1200, 'height' => 1200, 'mime_type' => 'image/jpeg', 'file_size' => 250000, 'source_trust_score' => 0];
+        $store->upsertCandidate($request['id'], 'old', $image + [
+            'search_run' => 1,
+            'status' => 'quality_passed',
+            'final_score' => 95,
+            'evidence' => ['strong_matches' => ['model_code'], 'matches' => ['model_code']],
+        ]);
+        $current = $store->upsertCandidate($request['id'], 'current', $image + [
+            'search_run' => 2,
+            'status' => 'downloaded',
+            'final_score' => 60,
+            'evidence' => ['strong_matches' => ['model_code'], 'matches' => ['model_code']],
+        ]);
+
+        (new AssessImageQualityJob($request['id'], $current['id']))->handle($store, $logger);
+
+        $decided = $store->getRequest($request['id']);
+
+        self::assertSame('manual_review', $decided['status']);
+        self::assertSame($current['id'], $decided['best_candidate_id']);
+        self::assertSame(60, $decided['final_score']);
+    }
+
+    public function test_failed_download_of_the_only_promoted_candidate_closes_the_request(): void
+    {
+        $store = new InMemoryPipelineStore();
+        $logger = new ProductImageEventLogger($store);
+        $request = $this->requestInRun($store, 1, 'matched');
+        $candidate = $store->upsertCandidate($request['id'], 'no-image', [
+            'search_run' => 1,
+            'status' => 'verified_match',
+            'image_url' => '',
+        ]);
+
+        (new DownloadCandidateImageJob($request['id'], $candidate['id']))->handle($store, $logger);
+
+        self::assertSame('rejected', $store->getCandidate($candidate['id'])['status']);
+        self::assertSame('no_candidates_found', $store->getRequest($request['id'])['status']);
+        self::assertSame('DOWNLOAD_FAILED', $store->getRequest($request['id'])['rejection_reason']);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function requestInRun(InMemoryPipelineStore $store, int $searchRun, string $status): array
+    {
+        $request = $store->upsertRequest(
+            ['client_id' => 7, 'erp_model_color_id' => 'MODEL-RED'],
+            ['client_id' => 7, 'brand' => 'Brand', 'model_code' => 'Model', 'color_name' => 'Red', 'status' => $status],
+        );
+
+        return $store->mergeRequestContext($request['id'], ['search' => ['run' => $searchRun]]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function candidateInRun(InMemoryPipelineStore $store, int|string $requestId, int $searchRun, string $fingerprint, string $title): array
+    {
+        return $store->upsertCandidate($requestId, $fingerprint, [
+            'search_run' => $searchRun,
+            'status' => 'candidate',
+            'title' => $title,
+            'source_page_url' => 'https://shop.example.test/p/' . $fingerprint,
+            'image_url' => 'https://shop.example.test/p/' . $fingerprint . '.jpg',
+            'source_domain' => 'shop.example.test',
+        ]);
     }
 }

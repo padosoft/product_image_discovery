@@ -112,6 +112,7 @@ abstract class ApiTestCase extends TestCase
         Schema::create('product_image_discovery_candidates', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('request_id');
+            $table->unsignedInteger('search_run')->nullable();
             $table->unsignedBigInteger('client_id')->nullable();
             $table->string('source_domain');
             $table->text('source_page_url');
