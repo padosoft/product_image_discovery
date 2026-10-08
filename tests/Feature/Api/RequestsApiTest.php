@@ -137,4 +137,43 @@ final class RequestsApiTest extends ApiTestCase
         $this->getJson('/api/product-image-discovery/requests/' . $record->getKey())
             ->assertForbidden();
     }
+
+    public function test_retry_clears_completed_pipeline_phases_and_redispatches_ingest(): void
+    {
+        Bus::fake();
+
+        $record = FakeProductImageDiscoveryRequest::query()->create([
+            'client_id' => 10,
+            'erp_model_id' => 'MODEL-001',
+            'erp_model_color_id' => 'MODEL-001-BLK',
+            'status' => 'no_candidates_found',
+            'attempts' => 1,
+            'raw_payload' => [
+                'name' => 'Sample Sneaker',
+                'context' => [
+                    'ingest' => ['payload_hash' => 'abc'],
+                    'search' => ['completed_at' => '2026-10-08T08:00:00+00:00'],
+                    'extract' => ['completed_at' => '2026-10-08T08:01:00+00:00'],
+                    'debug' => ['kept' => true],
+                ],
+            ],
+        ]);
+
+        $this->authenticate(['write']);
+
+        $this->postJson('/api/product-image-discovery/requests/' . $record->getKey() . '/retry')
+            ->assertOk()
+            ->assertJsonPath('ok', true);
+
+        $record->refresh();
+
+        $this->assertSame('queued', $record->status);
+        $this->assertSame(2, $record->attempts);
+        $this->assertSame('Sample Sneaker', $record->raw_payload['name']);
+        $this->assertSame(['debug' => ['kept' => true]], $record->raw_payload['context']);
+
+        Bus::assertDispatched(FakeIngestJob::class, function (FakeIngestJob $job) use ($record): bool {
+            return (string) $job->requestId === (string) $record->getKey();
+        });
+    }
 }

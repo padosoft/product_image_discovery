@@ -91,6 +91,10 @@
 - For HTML-scraper live tests against IP-rate-limited endpoints (DuckDuckGo, generic anti-bot services), skip in CI (via `getenv('CI')`) and also skip cleanly on 403/429/503 responses. Avoid hammering shared runner IPs that could get the host's range banned.
 - When you plan to extract a layer into a separate composer package later, don't rush the rename. Two preparation moves are enough to make the future extraction a `git mv`: (1) extract a generic interface for the cross-cutting concern that ties the layer to the host (e.g. `SearchEventLoggerInterface` decouples `SearchProviderManager` from the domain audit logger), and (2) parameterize any "hard-wired" model/table references through a constructor override + config lookup with a sensible default. The actual rename of namespace and DTO classes belongs to the extraction PR itself, where it is mechanical. Pre-renaming inside the same namespace adds churn without reducing future friction.
 
+- The pipeline guards (`context.ingest`, `context.search.completed_at`, `context.extract.completed_at`) are stored inside `raw_payload.context`, not in a dedicated column. A re-POST to `/requests` overwrites `raw_payload` and therefore restarts search; `/requests/{id}/retry` must clear those keys explicitly or `SearchProductImageJob` returns early and the request stays `queued`.
+- The request table has no `name`/`description` column: the client product name only survives in `raw_payload`. `ProductIdentityData::fromArray()` must fall back to `raw_payload.description|name|title`, otherwise name-based queries never fire for persisted requests.
+- `SearchProductImageJob` stops at the first query with results. A generic color code (e.g. `001`) lets a code+color query win with unrelated products, so every identifier-driven intent (EAN, supplier SKU, model code, including `site_*`) must discard results that do not mention its identifier; only name-based intents skip the check.
+
 ## Future Session Rules
 
 - Update `docs/PROGRESS.md` whenever a meaningful phase starts or finishes.
