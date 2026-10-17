@@ -1165,6 +1165,8 @@ Always on:
 
 Trusted source records let you prefer domains that are known to publish correct product images for a client or brand. A trusted source should improve confidence, but it should not bypass hard checks such as wrong color, wrong model, placeholder image or low-quality asset.
 
+To investigate a new source, follow the [optional Parallel Search MCP research workflow](https://doc.product-image-discovery.padosoft.com/guides/trusted-sources/#trusted-sources-research-new-sources-with-parallel). It covers finding product-color evidence and recording reviewed sources before using them in the pipeline.
+
 ## Optional Playwright Sidecar
 
 Some ecommerce pages render images only after JavaScript runs. The package keeps browser rendering out of PHP and delegates it to an optional Node sidecar.
