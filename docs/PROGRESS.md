@@ -1,5 +1,16 @@
 # Product Image Discovery - Progress
 
+## Session 2026-10-17
+
+### Optional Source Research Documentation
+
+- Added a manual Parallel Search MCP workflow to the Trusted Sources guide, with local Claude Code setup and a product-color research prompt based on the existing Herno example.
+- Mapped reviewed evidence to existing trusted-source fields and kept source permissions, manual review and the configured Laravel search providers explicit.
+- Linked the workflow from the README. No runtime or provider defaults changed.
+- Verified the local Claude Code HTTP setup and the custom User-Agent, plus anonymous MCP tool discovery, search and fetch.
+- Documentation guard and build passed: 28 pages, with the new section included in the semantic search index; generated links, LLM context and sitemap checked.
+- Composer strict validation passed; PHPUnit Unit/Feature/E2E passed with 153 tests, 535 assertions and four opt-in live tests skipped; sidecar tests passed 7/7 on Node 24.
+
 ## Session 2026-04-29
 
 ### Goal

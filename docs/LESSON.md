@@ -54,6 +54,7 @@
 - Sidecar tests are offline by default. The live contract test should remain opt-in.
 - Keep `.env.example` focused on host-app smoke testing and optional provider credentials. Keep `sidecar/.env.example` focused only on variables the Node sidecar actually reads.
 - README install commands should use single PHP namespace separators in copied shell commands, for example `Padosoft\ProductImageDiscovery\...`, not doubled separators.
+- docmd 0.8.6 prefixes nested heading anchors with parent headings, for example `trusted-sources-research-new-sources-with-parallel`. Check the generated HTML before linking to a new section from the README.
 - ERP request examples must not include image URLs or known product page URLs. The package's purpose is to discover those from product identity data.
 - Live E2E caught an enum-cast bug that unit tests missed: request `rejection_reason` must contain only `ProductImageDiscoveryRejectionReason` values. Manual-review decision reasons such as `source_not_auto_publishable` belong in decision context/audit, not in the enum column.
 - Real fashion product names often use multi-word model names rather than compact model codes. Matching must support phrase-based model matches while preserving anti-false-positive checks for similar code mismatches.
