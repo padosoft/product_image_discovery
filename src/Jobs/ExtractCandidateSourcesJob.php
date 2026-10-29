@@ -26,6 +26,20 @@ final class ExtractCandidateSourcesJob implements ShouldQueue
     use ResolvesQueueName;
     use SerializesModels;
 
+    /**
+     * Written by the download and quality jobs. A new run that finds an image again reuses its
+     * candidate (same fingerprint): left in place, these make the download job skip the image and
+     * never start the quality check, and the request stays "matched".
+     */
+    private const DOWNLOAD_AND_QUALITY_MARKERS = [
+        'local_original_path' => null,
+        'local_processed_path' => null,
+        'sha256' => null,
+        'phash' => null,
+        'downloaded_at' => null,
+        'quality_checked_at' => null,
+    ];
+
     public function __construct(private readonly int|string $requestId)
     {
         $this->onQueue($this->queueNameFor('extract'));
@@ -95,7 +109,7 @@ final class ExtractCandidateSourcesJob implements ShouldQueue
                     'search_run' => $context['search']['run'] ?? null,
                     'status' => ProductImageDiscoveryCandidateStatus::Candidate->value,
                     'quality_analysis' => $result['provider_metadata'] ?? [],
-                ]),
+                ], self::DOWNLOAD_AND_QUALITY_MARKERS),
             );
 
             $candidateIds[] = $candidate['id'];

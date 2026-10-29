@@ -41,6 +41,27 @@ final class TextNormalizerTest extends TestCase
         self::assertTrue(TextNormalizer::hasSimilarCodeMismatch('https://shop.example/p/bea-763435008iw2884', $code));
     }
 
+    public function test_a_code_written_with_encoded_spaces_in_a_url_is_found_once_the_url_is_decoded(): void
+    {
+        $url = 'https://img.vitkac.com/uploads/product_thumb/BUTY%20J15WS0047%20P7821-904/up/1.png';
+        $decoded = TextNormalizer::decodeUrls($url);
+
+        // Encoded, "%" splits the path and "20" sticks to the code: "20J15WS0047".
+        self::assertFalse(TextNormalizer::containsExactCode($url, 'J15WS0047'));
+        self::assertSame('https://img.vitkac.com/uploads/product_thumb/BUTY J15WS0047 P7821-904/up/1.png', $decoded);
+        self::assertTrue(TextNormalizer::containsExactCode($decoded, 'J15WS0047'));
+        self::assertTrue(TextNormalizer::containsPhrase($decoded, 'J15WS0047 P7821'));
+    }
+
+    public function test_only_urls_are_decoded_and_a_url_that_is_not_utf8_once_decoded_is_kept(): void
+    {
+        self::assertSame(
+            'Cotton 100%25, see https://shop.example/a b.jpg',
+            TextNormalizer::decodeUrls('Cotton 100%25, see https://shop.example/a%20b.jpg'),
+        );
+        self::assertSame('https://shop.example/caf%E9.jpg', TextNormalizer::decodeUrls('https://shop.example/caf%E9.jpg'));
+    }
+
     public function test_plain_words_of_a_url_slug_are_not_joined_into_a_code(): void
     {
         $url = 'https://www.nike.com/t/air-force-1-07-mens-shoes-jBrhbr';

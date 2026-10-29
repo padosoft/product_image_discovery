@@ -972,7 +972,7 @@ curl "https://your-app.test/api/product-image-discovery/requests/search?status=m
   -H "Accept: application/json"
 ```
 
-List the candidates of a request. Every search (first run, `/retry`, or a re-POST of the same `erp_model_color_id`) is a new run, stored in `raw_payload.context.search.run` and on each candidate as `search_run`; the list shows the latest run only, add `all_runs=1` for the full history:
+List the candidates of a request. Every search (first run, `/retry`, or a re-POST of the same `erp_model_color_id`) is a new run, stored in `raw_payload.context.search.run` and on each candidate as `search_run`; the list shows the latest run only, add `all_runs=1` for the full history. An image that an earlier run already found keeps its candidate, which moves to the new run and is verified, downloaded and quality-checked again:
 
 ```bash
 curl "https://your-app.test/api/product-image-discovery/requests/1/candidates?all_runs=1" \
@@ -1156,7 +1156,7 @@ The scorer reads its knobs from the `product_image_discovery_settings` table (gl
 
 Always on:
 
-- Codes are also found inside URL paths: the slug `...-tote-763435008iw2885` and the file name `763435008IW.2885_06.jpg` match the model code `763435008IW2885`. Only words with a digit are joined, so a slug of plain words (`air-force-1-07`) is not read as a code.
+- Codes are also found inside URL paths: the slug `...-tote-763435008iw2885` and the file name `763435008IW.2885_06.jpg` match the model code `763435008IW2885`. Only words with a digit are joined, so a slug of plain words (`air-force-1-07`) is not read as a code. URLs are percent-decoded first: the path `BUTY%20J15WS0047%20P7821-904` is read as `BUTY J15WS0047 P7821-904`.
 - Shopify images (`cdn.shopify.com` or a shop's `/cdn/shop/`) are asked 2048 px wide instead of the thumbnail the page showed (`width=165`, `height`, `crop`, legacy `_165x220` suffixes). Not the original upload, which can weigh several megabytes for the AI provider. The candidate size is then left empty, so the quality check measures the downloaded file.
 - A supplier SKU that is only the model code plus a color word (`763435008IW2885 Camel`) is not searched: no page writes it, and its queries bring back other products of the brand in that color. A numeric color code (`26SSH01164 002`) is kept.
 - The description step runs the product name with and without the color and merges the results: the ERP color name is often not the shop's one.

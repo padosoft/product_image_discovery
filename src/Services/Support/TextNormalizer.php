@@ -400,6 +400,21 @@ final class TextNormalizer
         return implode(' ', $strings);
     }
 
+    /**
+     * Percent-decodes every http(s) URL in the text. Some shops write the code in the file path
+     * with spaces ("BUTY%20J15WS0047%20P7821-904"): left encoded, "%" splits the token and "20"
+     * sticks to the code ("20J15WS0047"), so neither the code nor the words around it are found.
+     * A URL that does not decode to valid UTF-8 is kept as it is.
+     */
+    public static function decodeUrls(string $text): string
+    {
+        return preg_replace_callback('~https?://\S+~i', static function (array $match): string {
+            $decoded = rawurldecode($match[0]);
+
+            return mb_check_encoding($decoded, 'UTF-8') ? $decoded : $match[0];
+        }, $text) ?? $text;
+    }
+
     private static function toAscii(string $value): string
     {
         if (function_exists('iconv')) {

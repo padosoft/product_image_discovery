@@ -414,3 +414,22 @@ Request 16 again, after v1.3.0: the escalation ran three steps and Brave did ret
 
 - `vendor/bin/phpunit --testsuite Unit,Feature,E2E`: 151 tests, 4 skipped (live tests).
 
+### Retry of a found image and encoded URLs for v1.4.1 (branch `m-ad-fix-rerun-url-codes`)
+
+Two Gescat QA cases on v1.4.0, 2026-10-29:
+
+- Request 20 (Jil Sander `J15WZ0039 P7588 688`): run 3 found the image of an earlier run again and the request stayed `matched`. The reused candidate kept `local_original_path`, `downloaded_at` and `quality_checked_at` of the earlier run, so the download job returned without dispatching the quality check.
+- Request 21 (Jil Sander `J15WS0047 P7821 904`): four vitkac.com images, the code only in the URL as `BUTY%20J15WS0047%20P7821-904`. The three with a Tavily description repeating the code scored 65; the one without a description was read as `20J15WS0047` and rejected at 11, although the AI confirmed it.
+
+Changes:
+
+- `ExtractCandidateSourcesJob`: the upsert of a found image clears `local_original_path`, `local_processed_path`, `sha256`, `phash`, `downloaded_at` and `quality_checked_at`, so a reused candidate is downloaded and quality-checked again in the new run (one more download per image found again).
+- `TextNormalizer::decodeUrls()` + `CandidateImageData::textCorpus()`: the http(s) URLs of the scoring corpus are percent-decoded; a URL that does not decode to valid UTF-8 is kept as it is. The image of request 21 without a description now matches `model_phrase` + `color_code` (37 textual) and, with `ai_confirms_identifier_match` and the AI confirmation, scores 55 instead of 11.
+- Not changed: weights, thresholds, statuses, auto-publish gates. Requests already stuck in `matched` are not repaired: a retry after the update completes them.
+- Tests: retry finding the same image on the Eloquent store with a stored file (fails without the fix on the leftover `local_original_path`), decoding of encoded URLs and of non-URL text, request 21 scores with and without a description.
+
+### Verified Gates
+
+- `vendor/bin/phpunit --testsuite Unit,Feature,E2E`: 159 tests, 4 skipped (live tests).
+- `composer validate --strict --no-check-publish --no-check-lock`: `composer.json` valid (the local, untracked `composer.lock` is out of date).
+

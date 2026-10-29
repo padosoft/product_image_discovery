@@ -82,7 +82,7 @@ final readonly class CandidateImageData implements JsonSerializable
 
     public function textCorpus(): string
     {
-        return implode(' ', array_filter([
+        return TextNormalizer::decodeUrls(implode(' ', array_filter([
             $this->title,
             $this->description,
             $this->altText,
@@ -90,7 +90,7 @@ final readonly class CandidateImageData implements JsonSerializable
             $this->imageUrl,
             TextNormalizer::flattenStrings($this->structuredData),
             TextNormalizer::flattenStrings($this->evidence),
-        ]));
+        ])));
     }
 
     public function hasUsableImageUrl(): bool
